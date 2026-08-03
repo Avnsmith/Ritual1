@@ -7,17 +7,6 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../../'),
   },
-  async rewrites() {
-    if (process.env.NEXT_PUBLIC_SERVER_URL) {
-      return [
-        {
-          source: '/api/:path*',
-          destination: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/:path*`,
-        },
-      ];
-    }
-    return [];
-  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
