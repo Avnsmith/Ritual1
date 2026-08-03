@@ -25,13 +25,13 @@ export class BrowserAgent {
     try {
       const response = await axios.get(url, {
         headers: {
-          'User-Agent': 'WowWeb-Autonomous-Browser-Agent/1.0 (RitualNet Verifiable Agent)',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 WowWeb-Agent/1.0',
         },
         timeout: 10000,
       });
 
       const $ = cheerio.load(response.data);
-      $('script, style, iframe, nav, footer, ads').remove();
+      $('script, style, iframe, nav, footer, ads, svg').remove();
 
       const rawTitle = $('title').text().trim() || url;
       const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
@@ -62,40 +62,79 @@ export class BrowserAgent {
   }
 
   async searchWeb(query: string): Promise<SourceCitation[]> {
-    const mockWebResults: SourceCitation[] = [
-      {
-        title: 'Ritual Chain Developer Documentation',
-        url: 'https://docs.ritualfoundation.org',
-        snippet: 'Developer documentation for Ritual Chain: precompiles (0x0801, 0x0802, 0x0805, 0x0820), autonomous agents, chain architecture, and Symphony consensus.',
-        contentHash: hashString('Ritual Chain Developer Documentation 0x0802 0x0820'),
-        fetchedAt: Date.now(),
-      },
-      {
-        title: 'Ritual dApp Skills & Agent Protocols',
-        url: 'https://skills.ritualfoundation.org',
-        snippet: 'Agent skills and behavioral protocols for building dApps on Ritual Chain with automated verification, precompiles ABI, and smart contract callers.',
-        contentHash: hashString('Ritual dApp Skills & Agent Protocols'),
-        fetchedAt: Date.now(),
-      },
-      {
-        title: 'Ritual Explorer - Chain ID 1979',
-        url: 'https://explorer.ritualfoundation.org',
-        snippet: 'Official block explorer for RitualNet (Chain ID 1979). View contracts, system precompiles, and verified execution proof transactions.',
-        contentHash: hashString('Ritual Explorer Chain ID 1979'),
-        fetchedAt: Date.now(),
-      },
-    ];
+    const results: SourceCitation[] = [];
 
-    if (query.toLowerCase().includes('agent') || query.toLowerCase().includes('browser')) {
-      mockWebResults.push({
-        title: 'WowWeb AI Browser Agent Specs',
-        url: 'https://github.com/ritual-foundation/wowweb',
-        snippet: 'Production-ready AI Browser Agent running on RitualNet. Stores cryptographic proof commitments on-chain via WowWebProofRegistry.',
-        contentHash: hashString('WowWeb AI Browser Agent Specs'),
-        fetchedAt: Date.now(),
+    try {
+      // Real Live Web Search via DuckDuckGo HTML Interface
+      const response = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        timeout: 8000,
       });
+
+      const $ = cheerio.load(response.data);
+      $('.result').each((i, element) => {
+        if (results.length >= 5) return;
+
+        const titleEl = $(element).find('.result__title a');
+        const snippetEl = $(element).find('.result__snippet');
+        
+        let title = titleEl.text().trim();
+        let rawUrl = titleEl.attr('href') || '';
+
+        // Clean DuckDuckGo redirect URL format (/l/?uddg=...)
+        if (rawUrl.includes('uddg=')) {
+          const match = rawUrl.match(/uddg=([^&]+)/);
+          if (match && match[1]) {
+            rawUrl = decodeURIComponent(match[1]);
+          }
+        }
+
+        const snippet = snippetEl.text().trim();
+
+        if (title && rawUrl.startsWith('http') && this.isAllowedUrl(rawUrl)) {
+          results.push({
+            title,
+            url: rawUrl,
+            snippet: snippet || `Web search result for ${query}`,
+            contentHash: hashString(`${title}:${rawUrl}:${snippet}`),
+            fetchedAt: Date.now(),
+          });
+        }
+      });
+    } catch {
+      // Fallback if DuckDuckGo HTML is blocked or timed out
     }
 
-    return mockWebResults;
+    // Default fallback sources for RitualNet ecosystem queries
+    if (results.length === 0) {
+      results.push(
+        {
+          title: 'Ritual Chain Developer Documentation',
+          url: 'https://docs.ritualfoundation.org',
+          snippet: `Developer documentation for Ritual Chain: precompiles (0x0801 HTTP, 0x0802 LLM Inference, 0x0805, 0x0820 Stateful Agents), chain architecture, and Symphony consensus.`,
+          contentHash: hashString('Ritual Chain Developer Documentation 0x0802 0x0820'),
+          fetchedAt: Date.now(),
+        },
+        {
+          title: 'Ritual dApp Skills & Agent Protocols',
+          url: 'https://skills.ritualfoundation.org',
+          snippet: `Agent skills and behavioral protocols for building dApps on Ritual Chain with automated verification, precompiles ABI, and smart contract callers.`,
+          contentHash: hashString('Ritual dApp Skills & Agent Protocols'),
+          fetchedAt: Date.now(),
+        },
+        {
+          title: 'Ritual Explorer - Chain ID 1979',
+          url: 'https://explorer.ritualfoundation.org',
+          snippet: `Official block explorer for RitualNet (Chain ID 1979). View contracts, system precompiles, and verified execution proof transactions.`,
+          contentHash: hashString('Ritual Explorer Chain ID 1979'),
+          fetchedAt: Date.now(),
+        }
+      );
+    }
+
+    return results;
   }
 }
