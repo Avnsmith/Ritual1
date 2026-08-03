@@ -8,13 +8,15 @@ const nextConfig = {
     outputFileTracingRoot: path.join(__dirname, '../../'),
   },
   async rewrites() {
-    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${serverUrl}/api/:path*`,
-      },
-    ];
+    if (process.env.NEXT_PUBLIC_SERVER_URL) {
+      return [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/:path*`,
+        },
+      ];
+    }
+    return [];
   },
   webpack: (config) => {
     config.resolve.fallback = {
