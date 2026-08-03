@@ -5,3 +5,7 @@ export * from './SummaryAgent.js';
 export * from './VerificationAgent.js';
 export * from './ProofPublisher.js';
 export * from './AgentOrchestrator.js';
+export * from './RitualKnowledgeLayer.js';
+export * from './RetrievalEngine.js';
+export * from './LlmClient.js';
+export * from './providers/index.js';

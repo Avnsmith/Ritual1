@@ -11,7 +11,7 @@ export function Navbar() {
   const pathname = usePathname();
   const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
-  const { sessionToken, setIsModalOpen, disconnectWallet } = useAuth();
+  const { sessionToken, setIsModalOpen, setIsSettingsOpen, disconnectWallet } = useAuth();
 
   const isRitualNet = chain?.id === 1979;
 
@@ -76,8 +76,18 @@ export function Navbar() {
         </nav>
       </div>
 
-      {/* Wallet / Network Controls */}
+      {/* Controls & Settings */}
       <div className="flex items-center gap-3">
+        {/* Settings Button */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="p-2 rounded-xl bg-surface border border-border hover:border-accent text-zinc-300 hover:text-accent transition-colors flex items-center gap-1.5 text-xs font-semibold"
+          title="AI Provider Settings"
+        >
+          <Settings className="w-4 h-4 text-accent" />
+          <span className="hidden sm:inline">Settings</span>
+        </button>
+
         {/* Network Badge */}
         <a
           href="https://explorer.ritualfoundation.org"

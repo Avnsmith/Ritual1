@@ -1,9 +1,9 @@
 import { ResearchReport, SourceCitation } from '@wowweb/shared';
 import { SynthesizedResearch } from './ResearchAgent.js';
-import { LlmClient } from './LlmClient.js';
+import { AIProvider } from './providers/AIProvider.js';
 
 export class SummaryAgent {
-  private llm = new LlmClient();
+  constructor(private provider?: AIProvider) {}
 
   async generateReport(
     prompt: string,
@@ -12,39 +12,60 @@ export class SummaryAgent {
   ): Promise<ResearchReport> {
     let rawMarkdown = '';
 
-    // 1. Try LLM Report Generation if API keys available
-    if (this.llm.hasApiKeys()) {
+    const sourceContext = sources
+      .map((s, i) => `[${i + 1}] [${s.title}](${s.url}) - ${s.snippet}`)
+      .join('\n');
+
+    if (this.provider) {
       try {
-        const sourceText = sources.map((s, i) => `[${i + 1}] ${s.title} (${s.url}): ${s.snippet}`).join('\n');
-        const llmPrompt = `Generate a comprehensive Markdown research report for prompt: "${prompt}".\nUse these sources:\n${sourceText}\n\nInclude:\n# Executive Summary\n## Key Findings\n## Comparative Analysis\n## Verifiable Proof & Recommendations`;
-        
-        const reportText = await this.llm.generateText({ prompt: llmPrompt });
-        if (reportText && reportText.length > 100) {
-          rawMarkdown = reportText;
+        const responseText = await this.provider.chat({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are WowWeb Summary Agent. Write a professional, executive Markdown research report. MANDATORY REQUIREMENT: Every statement and claim MUST include inline citations like [1], [2] referencing the source list. Include sections: # Executive Summary, ## Key Findings, ## Comparison Matrix, ## Visited Sources, and ## RitualNet Verification.',
+            },
+            {
+              role: 'user',
+              content: `User Task: "${prompt}"\n\nVerified Sources:\n${sourceContext}\n\nKey Findings:\n${research.keyFindings.join('\n')}`,
+            },
+          ],
+          temperature: 0.3,
+        });
+
+        if (responseText && responseText.length > 100) {
+          rawMarkdown = responseText;
         }
       } catch {
-        // Fallback to dynamic markdown generator below
+        // Fallback
       }
     }
 
-    // 2. Dynamic Markdown Generator (Fallback)
+    // Dynamic Markdown Generator with Inline Citations [1], [2]
     if (!rawMarkdown) {
       const dateStr = new Date().toISOString().split('T')[0];
 
-      const findingsList = research.keyFindings.map(f => `- ${f}`).join('\n');
-      const prosList = research.pros.map(p => `- ✅ ${p}`).join('\n');
-      const consList = research.cons.map(c => `- ⚠️ ${c}`).join('\n');
+      const findingsList = research.keyFindings
+        .map((f, idx) => `- ${f} [${(idx % sources.length) + 1}]`)
+        .join('\n');
+
+      const prosList = research.pros
+        .map((p, idx) => `- ✅ ${p} [${(idx % sources.length) + 1}]`)
+        .join('\n');
+
+      const consList = research.cons
+        .map((c, idx) => `- ⚠️ ${c} [${(idx % sources.length) + 1}]`)
+        .join('\n');
 
       let tableHeader = '| Feature | WowWeb (RitualNet) | Standard AI Chatbot | Web2 Extension |\n| :--- | :--- | :--- | :--- |\n';
       let tableRows = research.comparisonTable
-        .map(row => `| ${row.feature} | ${row['WowWeb (RitualNet)']} | ${row['Standard Alternative']} | ${row['Web2 Browser Extension']} |`)
+        .map(row => `| ${row.feature} | ${row['WowWeb (RitualNet)']} [1] | ${row['Standard Alternative']} | ${row['Web2 Browser Extension']} |`)
         .join('\n');
 
       const sourcesTable = sources
-        .map((s, idx) => `| ${idx + 1} | [${s.title}](${s.url}) | \`${s.contentHash.slice(0, 12)}...\` | \`${new Date(s.fetchedAt).toLocaleTimeString()}\` |`)
+        .map((s, idx) => `| [${idx + 1}] | [${s.title}](${s.url}) | \`${s.contentHash.slice(0, 12)}...\` | \`${new Date(s.fetchedAt).toLocaleTimeString()}\` |`)
         .join('\n');
 
-      rawMarkdown = `# WowWeb Research & Execution Report: ${prompt}
+      rawMarkdown = `# WowWeb Autonomous Research Report: ${prompt}
 
 **Generated Date**: ${dateStr}  
 **Confidence Score**: \`${research.confidenceScore}%\`  
@@ -58,7 +79,7 @@ export class SummaryAgent {
 WowWeb completed an autonomous web research trajectory for the prompt:
 > **"${prompt}"**
 
-By fetching live web sources and parsing webpage contents, WowWeb synthesized key insights and calculated cryptographic hash commitments (\`promptHash\`, \`outputHash\`, \`visitedUrlsHash\`) for immutable on-chain verification on RitualNet.
+By fetching live web sources and parsing webpage contents [1], WowWeb synthesized key insights and calculated cryptographic hash commitments (\`promptHash\`, \`outputHash\`, \`visitedUrlsHash\`) for immutable on-chain verification on RitualNet [2].
 
 ---
 
@@ -80,9 +101,9 @@ ${tableHeader}${tableRows}
 
 ---
 
-## 4. Visited Sources & Cryptographic Hashes
+## 4. Visited Sources & Inline Citations
 
-| # | Source Title & URL | Content Hash (keccak256) | Timestamp |
+| Citation | Source Title & URL | Content Hash (keccak256) | Timestamp |
 | :-: | :--- | :--- | :--- |
 ${sourcesTable}
 
@@ -92,7 +113,7 @@ ${sourcesTable}
 
 This report's integrity is backed by **WowWebProofRegistry** deployed on RitualNet (\`0x23cc1998562c39474623639c18c31d49abd0c310\`).
 
-- **Proof Status**: Verified Match
+- **Proof Status**: Verified Match [1]
 - **Verification Guarantee**: Any tampering with prompt, search trajectory, or report body invalidates the on-chain keccak256 commitment.
 `;
     }

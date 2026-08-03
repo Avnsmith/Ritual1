@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import sanitizeHtml from 'sanitize-html';
 import { SourceCitation, hashString } from '@wowweb/shared';
+import { RitualKnowledgeLayer } from './RitualKnowledgeLayer.js';
 
 export class BrowserAgent {
   private isAllowedUrl(url: string): boolean {
@@ -64,8 +65,20 @@ export class BrowserAgent {
   async searchWeb(query: string): Promise<SourceCitation[]> {
     const results: SourceCitation[] = [];
 
+    // 1. Priority Ritual Knowledge Sources
+    const ritualSources = RitualKnowledgeLayer.getPrioritySources(query);
+    for (const rSource of ritualSources) {
+      results.push({
+        title: rSource.title,
+        url: rSource.url,
+        snippet: rSource.snippet,
+        contentHash: hashString(`${rSource.title}:${rSource.url}:${rSource.snippet}`),
+        fetchedAt: Date.now(),
+      });
+    }
+
+    // 2. Real Live Web Search via DuckDuckGo HTML Interface
     try {
-      // Real Live Web Search via DuckDuckGo HTML Interface
       const response = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -76,7 +89,7 @@ export class BrowserAgent {
 
       const $ = cheerio.load(response.data);
       $('.result').each((i, element) => {
-        if (results.length >= 5) return;
+        if (results.length >= 7) return;
 
         const titleEl = $(element).find('.result__title a');
         const snippetEl = $(element).find('.result__snippet');
@@ -84,7 +97,6 @@ export class BrowserAgent {
         let title = titleEl.text().trim();
         let rawUrl = titleEl.attr('href') || '';
 
-        // Clean DuckDuckGo redirect URL format (/l/?uddg=...)
         if (rawUrl.includes('uddg=')) {
           const match = rawUrl.match(/uddg=([^&]+)/);
           if (match && match[1]) {
@@ -105,34 +117,7 @@ export class BrowserAgent {
         }
       });
     } catch {
-      // Fallback if DuckDuckGo HTML is blocked or timed out
-    }
-
-    // Default fallback sources for RitualNet ecosystem queries
-    if (results.length === 0) {
-      results.push(
-        {
-          title: 'Ritual Chain Developer Documentation',
-          url: 'https://docs.ritualfoundation.org',
-          snippet: `Developer documentation for Ritual Chain: precompiles (0x0801 HTTP, 0x0802 LLM Inference, 0x0805, 0x0820 Stateful Agents), chain architecture, and Symphony consensus.`,
-          contentHash: hashString('Ritual Chain Developer Documentation 0x0802 0x0820'),
-          fetchedAt: Date.now(),
-        },
-        {
-          title: 'Ritual dApp Skills & Agent Protocols',
-          url: 'https://skills.ritualfoundation.org',
-          snippet: `Agent skills and behavioral protocols for building dApps on Ritual Chain with automated verification, precompiles ABI, and smart contract callers.`,
-          contentHash: hashString('Ritual dApp Skills & Agent Protocols'),
-          fetchedAt: Date.now(),
-        },
-        {
-          title: 'Ritual Explorer - Chain ID 1979',
-          url: 'https://explorer.ritualfoundation.org',
-          snippet: `Official block explorer for RitualNet (Chain ID 1979). View contracts, system precompiles, and verified execution proof transactions.`,
-          contentHash: hashString('Ritual Explorer Chain ID 1979'),
-          fetchedAt: Date.now(),
-        }
-      );
+      // Fallback
     }
 
     return results;

@@ -1,4 +1,4 @@
-import { LlmClient } from './LlmClient.js';
+import { AIProvider } from './providers/AIProvider.js';
 
 export interface PlanTask {
   id: string;
@@ -17,18 +17,29 @@ export interface AgentDecisionPlan {
 }
 
 export class PlannerAgent {
-  private llm = new LlmClient();
+  constructor(private provider?: AIProvider) {}
 
   async analyze(userPrompt: string): Promise<AgentDecisionPlan> {
     const cleanPrompt = userPrompt.trim();
-    const lower = cleanPrompt.toLowerCase();
 
-    // 1. Try LLM Inference if API key is present
-    if (this.llm.hasApiKeys()) {
+    if (this.provider) {
       try {
-        const llmPrompt = `Analyze user task and output valid JSON only:\nTask: "${cleanPrompt}"\n\nJSON Schema:\n{\n  "requiresBrowser": true,\n  "requiresResearch": true,\n  "requiresVerification": true,\n  "requiresProofPublisher": true,\n  "queries": ["string"],\n  "reasoning": "string"\n}`;
-        const rawText = await this.llm.generateText({ prompt: llmPrompt });
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const responseText = await this.provider.chat({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are WowWeb Autonomous Planner Agent. Deconstruct user research task into JSON plan with keys: requiresBrowser (boolean), requiresResearch (boolean), requiresVerification (boolean), requiresProofPublisher (boolean), subTasks (array of {id, query, type}), reasoning (string). Output valid JSON only.',
+            },
+            {
+              role: 'user',
+              content: `Deconstruct research task: "${cleanPrompt}"`,
+            },
+          ],
+          temperature: 0.2,
+          jsonOutput: true,
+        });
+
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           return {
@@ -36,64 +47,40 @@ export class PlannerAgent {
             requiresResearch: parsed.requiresResearch ?? true,
             requiresVerification: parsed.requiresVerification ?? true,
             requiresProofPublisher: parsed.requiresProofPublisher ?? true,
-            subTasks: (parsed.queries || [cleanPrompt]).map((q: string, idx: number) => ({
-              id: `task-${idx + 1}`,
-              query: q,
-              type: 'search',
-            })),
-            reasoning: parsed.reasoning || `LLM Planner orchestrated execution for query: "${cleanPrompt}"`,
+            subTasks: (parsed.subTasks || [{ id: 'task-1', query: cleanPrompt, type: 'search' }]),
+            reasoning: parsed.reasoning || `LLM Planner (${this.provider.name}) generated dynamic execution plan for "${cleanPrompt}"`,
           };
         }
       } catch {
-        // Fallback to deterministic intent engine
+        // Fallback to internal intent reasoning
       }
     }
 
-    // 2. Intelligent Intent Analysis Engine
-    const requiresBrowser = true;
-    const requiresResearch = true;
-    const requiresVerification = true;
-    const requiresProofPublisher = true;
-
+    // Deterministic Intent Planner
+    const lower = cleanPrompt.toLowerCase();
     const subTasks: PlanTask[] = [
-      {
-        id: 'task-1',
-        query: cleanPrompt,
-        type: 'search',
-      },
+      { id: 'task-1', query: cleanPrompt, type: 'search' },
     ];
 
-    if (lower.includes('ritual') || lower.includes('agent') || lower.includes('precompile') || lower.includes('contract')) {
+    if (lower.includes('ritual') || lower.includes('precompile') || lower.includes('contract')) {
       subTasks.push({
         id: 'task-2',
-        query: `${cleanPrompt} RitualNet documentation precompiles`,
-        targetUrls: ['https://docs.ritualfoundation.org', 'https://skills.ritualfoundation.org', 'https://explorer.ritualfoundation.org'],
+        query: `${cleanPrompt} RitualNet documentation`,
+        targetUrls: ['https://docs.ritualfoundation.org', 'https://skills.ritualfoundation.org'],
         type: 'docs',
       });
     }
 
-    if (lower.includes('github') || lower.includes('code') || lower.includes('repo')) {
-      subTasks.push({
-        id: 'task-3',
-        query: `${cleanPrompt} GitHub repository code`,
-        targetUrls: ['https://github.com/ritual-foundation'],
-        type: 'github',
-      });
-    }
-
-    const reasoning = `Autonomous Planner analyzed query "${cleanPrompt}": Triggering browser crawling (${subTasks.length} sub-tasks), deep synthesis, keccak256 proof generation, and RitualNet transaction anchoring.`;
-
     return {
-      requiresBrowser,
-      requiresResearch,
-      requiresVerification,
-      requiresProofPublisher,
+      requiresBrowser: true,
+      requiresResearch: true,
+      requiresVerification: true,
+      requiresProofPublisher: true,
       subTasks,
-      reasoning,
+      reasoning: `Autonomous Planner evaluated task "${cleanPrompt}": Web research, synthesis, keccak256 proof computation, and RitualNet transaction anchoring enabled.`,
     };
   }
 
-  // Legacy compatibility wrapper
   async createPlan(userPrompt: string): Promise<PlanTask[]> {
     const decision = await this.analyze(userPrompt);
     return decision.subTasks;

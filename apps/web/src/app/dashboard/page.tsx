@@ -5,12 +5,13 @@ import { useAccount } from 'wagmi';
 import { useAuth } from '../providers';
 import { ExecutionTimeline } from '../../components/ExecutionTimeline';
 import { ReportViewer } from '../../components/ReportViewer';
+import { SourcePanel } from '../../components/SourcePanel';
 import { AgentTask, ExecutionStep } from '@wowweb/shared';
-import { Search, Sparkles, ShieldCheck, Terminal, Compass, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Sparkles, ShieldCheck, Terminal, Compass, ArrowRight, Loader2, Settings, Globe } from 'lucide-react';
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
-  const { sessionToken, setIsModalOpen } = useAuth();
+  const { sessionToken, setIsModalOpen, setIsSettingsOpen, aiConfig } = useAuth();
 
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,9 +19,9 @@ export default function DashboardPage() {
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
 
   const suggestedPrompts = [
-    'Research every new AI browser agent in 2026',
-    'Compare RitualNet precompiles 0x0801 vs 0x0802',
-    'Inspect Ritual foundation GitHub repositories',
+    'Research RitualNet AI precompiles 0x0801 and 0x0802',
+    'Compare WowWeb vs Perplexity and Manus AI agents',
+    'Inspect Ritual foundation GitHub repositories and SDK',
     'Analyze zero-knowledge proof verification on RitualNet',
   ];
 
@@ -38,8 +39,16 @@ export default function DashboardPage() {
     setCurrentTask(null);
 
     const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || '';
-    const sseUrl = `${backendUrl}/api/agent/stream?prompt=${encodeURIComponent(targetPrompt)}&owner=${address}`;
+    const params = new URLSearchParams({
+      prompt: targetPrompt,
+      owner: address,
+      provider: aiConfig.provider || 'openai',
+      ...(aiConfig.apiKey ? { apiKey: aiConfig.apiKey } : {}),
+      ...(aiConfig.model ? { model: aiConfig.model } : {}),
+      ...(aiConfig.temperature ? { temperature: String(aiConfig.temperature) } : {}),
+    });
 
+    const sseUrl = `${backendUrl}/api/agent/stream?${params.toString()}`;
     const eventSource = new EventSource(sseUrl);
 
     eventSource.addEventListener('step', (e: MessageEvent) => {
@@ -81,19 +90,29 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {address ? (
-          <div className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-mono text-zinc-300 flex items-center gap-2 shrink-0">
-            <ShieldCheck className="w-4 h-4 text-ritual" />
-            <span>Agent Owner: {address.slice(0, 6)}...{address.slice(-4)}</span>
-          </div>
-        ) : (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
+            onClick={() => setIsSettingsOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-zinc-300 hover:border-accent hover:text-accent transition-colors flex items-center gap-1.5"
           >
-            Connect Wallet to Start
+            <Settings className="w-3.5 h-3.5 text-accent" />
+            <span className="font-mono text-[11px]">Provider: {aiConfig.provider.toUpperCase()}</span>
           </button>
-        )}
+
+          {address ? (
+            <div className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-mono text-zinc-300 flex items-center gap-2 shrink-0">
+              <ShieldCheck className="w-4 h-4 text-ritual" />
+              <span>Owner: {address.slice(0, 6)}...{address.slice(-4)}</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
+            >
+              Connect Wallet to Start
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Command Bar Input */}
@@ -144,9 +163,16 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Report Viewer */}
+      {/* Layout Grid: Report Viewer & Visited Sources */}
       {currentTask?.report && (
-        <ReportViewer report={currentTask.report} proof={currentTask.proof} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <ReportViewer report={currentTask.report} proof={currentTask.proof} />
+          </div>
+          <div className="lg:col-span-1">
+            <SourcePanel sources={currentTask.report.sources} />
+          </div>
+        </div>
       )}
     </div>
   );

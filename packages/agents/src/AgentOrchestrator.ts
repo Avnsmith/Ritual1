@@ -5,24 +5,29 @@ import { ResearchAgent } from './ResearchAgent.js';
 import { SummaryAgent } from './SummaryAgent.js';
 import { VerificationAgent } from './VerificationAgent.js';
 import { ProofPublisher } from './ProofPublisher.js';
+import { AIProviderConfig } from './providers/AIProvider.js';
+import { ProviderFactory } from './providers/ProviderFactory.js';
 
 export type EventCallback = (step: ExecutionStep, task: AgentTask) => void;
 
 export class AgentOrchestrator {
-  private planner = new PlannerAgent();
   private browser = new BrowserAgent();
-  private research = new ResearchAgent();
-  private summary = new SummaryAgent();
   private verification = new VerificationAgent();
   private publisher = new ProofPublisher();
 
   async executeTask(
     prompt: string,
     ownerWallet: `0x${string}`,
-    onEvent?: EventCallback
+    onEvent?: EventCallback,
+    providerConfig?: AIProviderConfig
   ): Promise<AgentTask> {
     const executionId = generateExecutionId();
     const startTime = Date.now();
+
+    const provider = ProviderFactory.createProvider(providerConfig);
+    const planner = new PlannerAgent(provider);
+    const research = new ResearchAgent(provider);
+    const summary = new SummaryAgent(provider);
 
     const steps: ExecutionStep[] = [];
     const task: AgentTask = {
@@ -57,8 +62,8 @@ export class AgentOrchestrator {
 
     try {
       // 1. Planner Agent Autonomous Decision
-      emitStep('planner', 'Analyzing Prompt & Strategy', 'Planner Agent evaluating capability requirements');
-      const plan = await this.planner.analyze(prompt);
+      emitStep('planner', 'Analyzing Prompt & Intent', `Planner Agent (${provider.name}) evaluating capability requirements`);
+      const plan = await planner.analyze(prompt);
       emitStep(
         'planner',
         'Autonomous Execution Strategy Set',
@@ -72,31 +77,31 @@ export class AgentOrchestrator {
       // 2. Browser Agent (if required by Planner)
       if (plan.requiresBrowser) {
         task.status = 'searching';
-        emitStep('browser', 'Searching Web Infrastructure', `Querying web indexes for "${prompt}"`);
+        emitStep('browser', 'Searching Ritual Docs & Infrastructure', `Querying Ritual knowledge layer & web indexes for "${prompt}"`);
         const searchResults = await this.browser.searchWeb(prompt);
 
         task.status = 'reading';
-        emitStep('browser', 'Extracting Web Pages & Docs', `Fetching and parsing ${searchResults.length} source pages`);
+        emitStep('browser', 'Extracting Web Pages & Repos', `Fetching and parsing ${searchResults.length} source pages`);
 
         for (const res of searchResults) {
           emitStep('browser', 'Parsing Page Content', `Inspecting ${res.title} (${res.url})`);
           const pageData = await this.browser.fetchPage(res.url);
           fetchedSources.push(pageData.snippet.startsWith('Failed') ? res : pageData);
         }
-        emitStep('browser', 'Web Crawling Completed', `Successfully extracted content from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length });
+        emitStep('browser', 'Web Crawling Completed', `Successfully extracted content from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length, sources: fetchedSources });
       }
 
       // 3. Research & Summary Agent (if required by Planner)
       if (plan.requiresResearch) {
         task.status = 'summarizing';
-        emitStep('research', 'Synthesizing Findings', 'Research Agent extracting key insights, pros/cons, and comparison matrix');
-        const researchData = await this.research.analyzeSources(prompt, fetchedSources);
+        emitStep('research', 'Synthesizing Findings & Citations', `Research Agent (${provider.name}) cross-comparing source chunks`);
+        const researchData = await research.analyzeSources(prompt, fetchedSources);
         emitStep('research', 'Synthesis Complete', `Confidence score evaluated at ${researchData.confidenceScore}%`, 'completed');
 
-        emitStep('summary', 'Formatting Structured Report', 'Summary Agent generating executive markdown report and citation table');
-        const finalReport = await this.summary.generateReport(prompt, researchData, fetchedSources);
+        emitStep('summary', 'Formatting Executive Report', `Summary Agent generating markdown report with inline citations [1], [2]`);
+        const finalReport = await summary.generateReport(prompt, researchData, fetchedSources);
         task.report = finalReport;
-        emitStep('summary', 'Report Formatted', 'Markdown & citation matrix generated successfully', 'completed');
+        emitStep('summary', 'Report Formatted', 'Markdown report & citation matrix generated successfully', 'completed');
       }
 
       // 4. Verification Agent (if required by Planner)

@@ -1,4 +1,4 @@
-import { AgentOrchestrator } from '@wowweb/agents';
+import { AgentOrchestrator, AIProviderConfig } from '@wowweb/agents';
 import { AgentTask } from '@wowweb/shared';
 
 export const runtime = 'nodejs';
@@ -12,6 +12,19 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const prompt = searchParams.get('prompt');
   const owner = searchParams.get('owner') || '0x0000000000000000000000000000000000000000';
+
+  const provider = searchParams.get('provider') as AIProviderConfig['provider'] || 'openai';
+  const apiKey = searchParams.get('apiKey') || undefined;
+  const model = searchParams.get('model') || undefined;
+  const tempStr = searchParams.get('temperature');
+  const temperature = tempStr ? parseFloat(tempStr) : undefined;
+
+  const providerConfig: AIProviderConfig = {
+    provider,
+    apiKey,
+    model,
+    temperature,
+  };
 
   if (!prompt) {
     return new Response(JSON.stringify({ error: 'Missing prompt parameter' }), {
@@ -35,10 +48,15 @@ export async function GET(req: Request) {
 
       try {
         const orchestrator = new AgentOrchestrator();
-        const task = await orchestrator.executeTask(prompt, owner as `0x${string}`, (step, task) => {
-          taskStore.set(task.id, task);
-          sendEvent('step', { step, task });
-        });
+        const task = await orchestrator.executeTask(
+          prompt,
+          owner as `0x${string}`,
+          (step, task) => {
+            taskStore.set(task.id, task);
+            sendEvent('step', { step, task });
+          },
+          providerConfig
+        );
         taskStore.set(task.id, task);
         sendEvent('complete', { task });
       } catch (err: unknown) {

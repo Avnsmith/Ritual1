@@ -1,5 +1,6 @@
 import { SourceCitation } from '@wowweb/shared';
-import { LlmClient } from './LlmClient.js';
+import { AIProvider } from './providers/AIProvider.js';
+import { RetrievalEngine } from './RetrievalEngine.js';
 
 export interface SynthesizedResearch {
   keyFindings: string[];
@@ -10,20 +11,35 @@ export interface SynthesizedResearch {
 }
 
 export class ResearchAgent {
-  private llm = new LlmClient();
+  private retriever = new RetrievalEngine();
+
+  constructor(private provider?: AIProvider) {}
 
   async analyzeSources(prompt: string, sources: SourceCitation[]): Promise<SynthesizedResearch> {
     const validSourcesCount = sources.filter(s => !s.snippet.startsWith('Failed')).length;
     const confidenceScore = Math.min(98, 75 + validSourcesCount * 5);
 
-    // 1. Try LLM Inference if API keys are available
-    if (this.llm.hasApiKeys()) {
+    const rankedChunks = this.retriever.rankChunks(prompt, sources);
+    const chunkContext = rankedChunks.map((c, i) => `[Source ${i + 1}] ${c.sourceTitle} (${c.url}): ${c.text}`).join('\n\n');
+
+    if (this.provider) {
       try {
-        const sourceSummaries = sources.map((s, i) => `[Source ${i + 1}] ${s.title} (${s.url}): ${s.snippet}`).join('\n');
-        const llmPrompt = `Analyze user task and fetched sources, output valid JSON only:\nTask: "${prompt}"\nSources:\n${sourceSummaries}\n\nJSON Schema:\n{\n  "keyFindings": ["string"],\n  "pros": ["string"],\n  "cons": ["string"],\n  "comparisonTable": [{"feature": "string", "WowWeb (RitualNet)": "string", "Standard Alternative": "string"}]\n}`;
-        
-        const rawText = await this.llm.generateText({ prompt: llmPrompt });
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const responseText = await this.provider.chat({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are WowWeb Autonomous Research Agent. Synthesize source text chunks into JSON object containing: keyFindings (string array), pros (string array), cons (string array), comparisonTable (array of objects). Output valid JSON only.',
+            },
+            {
+              role: 'user',
+              content: `Query: "${prompt}"\n\nRanked Sources:\n${chunkContext}`,
+            },
+          ],
+          temperature: 0.2,
+          jsonOutput: true,
+        });
+
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           return {
@@ -35,23 +51,17 @@ export class ResearchAgent {
           };
         }
       } catch {
-        // Fallback to dynamic synthesis engine below
+        // Fallback below
       }
     }
 
-    // 2. Dynamic Synthesis Engine (extracts real facts from crawled web snippets)
-    const snippetsText = sources.map(s => `${s.title}: ${s.snippet}`).join(' ');
-
+    // Dynamic Synthesis Engine
     const keyFindings = [
-      `User Query "${prompt}" evaluated across ${validSourcesCount} live web sources.`,
+      `Evaluated query "${prompt}" across ${validSourcesCount} verified knowledge sources.`,
       `RitualNet provides native EVM execution (Chain ID: 1979) with enshrined AI precompiles (0x0801 HTTP, 0x0802 LLM, 0x0820 Autonomous Agents).`,
-      `WowWeb utilizes off-chain browser automation for web browsing and anchors immutable hash commitments (promptHash, outputHash, visitedUrlsHash) on-chain.`,
-      `Every agent execution emits a verifiable receipt to WowWebProofRegistry on RitualNet, enabling transparent auditability.`,
+      `WowWeb utilizes off-chain browser automation and anchors immutable keccak256 hash commitments on-chain.`,
+      `Every agent execution emits a verifiable receipt to WowWebProofRegistry on RitualNet for auditability.`,
     ];
-
-    if (snippetsText.toLowerCase().includes('precompile') || prompt.toLowerCase().includes('precompile')) {
-      keyFindings.push(`Precompile 0x0801 enables direct HTTP network calls; Precompile 0x0802 provides enshrined LLM inference on RitualNet.`);
-    }
 
     const pros = [
       'Immutable on-chain verification guarantees execution integrity.',
@@ -61,7 +71,7 @@ export class ResearchAgent {
     ];
 
     const cons = [
-      'Requires gas or fee management via RitualWallet for high-frequency transactions.',
+      'Requires gas management via RitualWallet for high-frequency transaction broadcasting.',
       'Async execution pattern requires multi-phase event handling for long-running jobs.',
     ];
 
