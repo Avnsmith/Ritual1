@@ -5,11 +5,27 @@ export interface PlanTask {
   type: 'search' | 'scrape' | 'github' | 'docs';
 }
 
+export interface AgentDecisionPlan {
+  requiresBrowser: boolean;
+  requiresResearch: boolean;
+  requiresVerification: boolean;
+  requiresProofPublisher: boolean;
+  subTasks: PlanTask[];
+  reasoning: string;
+}
+
 export class PlannerAgent {
-  async createPlan(userPrompt: string): Promise<PlanTask[]> {
+  async analyze(userPrompt: string): Promise<AgentDecisionPlan> {
     const cleanPrompt = userPrompt.trim();
-    
-    const tasks: PlanTask[] = [
+    const lower = cleanPrompt.toLowerCase();
+
+    // Autonomous Capability Decisions (Enabled internally by default)
+    const requiresBrowser = true;
+    const requiresResearch = true;
+    const requiresVerification = true;
+    const requiresProofPublisher = true;
+
+    const subTasks: PlanTask[] = [
       {
         id: 'task-1',
         query: cleanPrompt,
@@ -17,17 +33,17 @@ export class PlannerAgent {
       },
     ];
 
-    if (cleanPrompt.toLowerCase().includes('agent') || cleanPrompt.toLowerCase().includes('browser')) {
-      tasks.push({
+    if (lower.includes('ritual') || lower.includes('agent') || lower.includes('precompile') || lower.includes('contract')) {
+      subTasks.push({
         id: 'task-2',
-        query: 'RitualNet AI agent precompiles documentation',
-        targetUrls: ['https://docs.ritualfoundation.org', 'https://skills.ritualfoundation.org'],
+        query: 'RitualNet AI precompiles and proof registry documentation',
+        targetUrls: ['https://docs.ritualfoundation.org', 'https://skills.ritualfoundation.org', 'https://explorer.ritualfoundation.org'],
         type: 'docs',
       });
     }
 
-    if (cleanPrompt.toLowerCase().includes('github') || cleanPrompt.toLowerCase().includes('code')) {
-      tasks.push({
+    if (lower.includes('github') || lower.includes('code') || lower.includes('repo')) {
+      subTasks.push({
         id: 'task-3',
         query: 'Ritual foundation repositories',
         targetUrls: ['https://github.com/ritual-foundation'],
@@ -35,6 +51,21 @@ export class PlannerAgent {
       });
     }
 
-    return tasks;
+    const reasoning = `Autonomous Planner evaluated prompt: Browser crawling (${subTasks.length} sub-tasks), synthesis, keccak256 verification, and RitualNet proof publishing automatically enabled.`;
+
+    return {
+      requiresBrowser,
+      requiresResearch,
+      requiresVerification,
+      requiresProofPublisher,
+      subTasks,
+      reasoning,
+    };
+  }
+
+  // Legacy compatibility wrapper
+  async createPlan(userPrompt: string): Promise<PlanTask[]> {
+    const decision = await this.analyze(userPrompt);
+    return decision.subTasks;
   }
 }

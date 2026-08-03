@@ -105,7 +105,7 @@ export default function DashboardPage() {
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleStartTask()}
-            placeholder="Ask WowWeb to research anything... (e.g. Research top autonomous AI browser agents)"
+            placeholder="Ask WowWeb anything... (e.g. Research RitualNet AI precompiles and verify smart contract execution proofs)"
             className="w-full pl-12 pr-32 py-4 rounded-xl bg-elevated border border-border text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-accent transition-colors font-sans"
           />
 

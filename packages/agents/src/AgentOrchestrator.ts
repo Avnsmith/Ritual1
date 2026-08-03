@@ -56,60 +56,74 @@ export class AgentOrchestrator {
     };
 
     try {
-      // 1. Planner Agent
-      emitStep('planner', 'Deconstructing Request', 'Planner Agent analyzing prompt and designing web research strategy');
-      const planTasks = await this.planner.createPlan(prompt);
-      emitStep('planner', 'Research Plan Created', `Planned ${planTasks.length} search sub-tasks`, 'completed', { planTasks });
-
-      // 2. Browser Agent
-      task.status = 'searching';
-      emitStep('browser', 'Searching Web Infrastructure', `Querying web indexes for "${prompt}"`);
-      const searchResults = await this.browser.searchWeb(prompt);
-
-      task.status = 'reading';
-      emitStep('browser', 'Extracting Web Pages & Docs', `Fetching and parsing ${searchResults.length} source pages`);
-
-      const fetchedSources: SourceCitation[] = [];
-      for (const res of searchResults) {
-        emitStep('browser', 'Parsing Page Content', `Inspecting ${res.title} (${res.url})`);
-        const pageData = await this.browser.fetchPage(res.url);
-        fetchedSources.push(pageData.snippet.startsWith('Failed') ? res : pageData);
-      }
-      emitStep('browser', 'Web Crawling Completed', `Successfully extracted content from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length });
-
-      // 3. Research Agent
-      task.status = 'summarizing';
-      emitStep('research', 'Synthesizing Findings', 'Research Agent extracting key insights, pros/cons, and comparison matrix');
-      const researchData = await this.research.analyzeSources(prompt, fetchedSources);
-      emitStep('research', 'Synthesis Complete', `Confidence score evaluated at ${researchData.confidenceScore}%`, 'completed');
-
-      // 4. Summary Agent
-      emitStep('summary', 'Formatting Structured Report', 'Summary Agent generating executive markdown report and citation table');
-      const finalReport = await this.summary.generateReport(prompt, researchData, fetchedSources);
-      task.report = finalReport;
-      emitStep('summary', 'Report Formatted', 'Markdown & citation matrix generated successfully', 'completed');
-
-      // 5. Verification Agent
-      task.status = 'verifying';
-      emitStep('verification', 'Generating Cryptographic Proof', 'Computing keccak256 hashes of prompt, output, and visited sources');
-      const proofMetadata = await this.verification.createProof(
-        executionId,
-        prompt,
-        steps,
-        finalReport,
-        ownerWallet,
-        task.agentId
+      // 1. Planner Agent Autonomous Decision
+      emitStep('planner', 'Analyzing Prompt & Strategy', 'Planner Agent evaluating capability requirements');
+      const plan = await this.planner.analyze(prompt);
+      emitStep(
+        'planner',
+        'Autonomous Execution Strategy Set',
+        plan.reasoning,
+        'completed',
+        { plan }
       );
-      emitStep('verification', 'Proof Hashes Computed', `PromptHash: ${proofMetadata.promptHash.slice(0, 10)}... OutputHash: ${proofMetadata.outputHash.slice(0, 10)}...`, 'completed');
 
-      // 6. Proof Publisher
-      emitStep('proof', 'Publishing Proof to RitualNet', 'Submitting transaction to WowWebProofRegistry (Chain ID: 1979)');
-      const publishedProof = await this.publisher.publishProof(proofMetadata);
-      task.proof = publishedProof;
+      let fetchedSources: SourceCitation[] = [];
+
+      // 2. Browser Agent (if required by Planner)
+      if (plan.requiresBrowser) {
+        task.status = 'searching';
+        emitStep('browser', 'Searching Web Infrastructure', `Querying web indexes for "${prompt}"`);
+        const searchResults = await this.browser.searchWeb(prompt);
+
+        task.status = 'reading';
+        emitStep('browser', 'Extracting Web Pages & Docs', `Fetching and parsing ${searchResults.length} source pages`);
+
+        for (const res of searchResults) {
+          emitStep('browser', 'Parsing Page Content', `Inspecting ${res.title} (${res.url})`);
+          const pageData = await this.browser.fetchPage(res.url);
+          fetchedSources.push(pageData.snippet.startsWith('Failed') ? res : pageData);
+        }
+        emitStep('browser', 'Web Crawling Completed', `Successfully extracted content from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length });
+      }
+
+      // 3. Research & Summary Agent (if required by Planner)
+      if (plan.requiresResearch) {
+        task.status = 'summarizing';
+        emitStep('research', 'Synthesizing Findings', 'Research Agent extracting key insights, pros/cons, and comparison matrix');
+        const researchData = await this.research.analyzeSources(prompt, fetchedSources);
+        emitStep('research', 'Synthesis Complete', `Confidence score evaluated at ${researchData.confidenceScore}%`, 'completed');
+
+        emitStep('summary', 'Formatting Structured Report', 'Summary Agent generating executive markdown report and citation table');
+        const finalReport = await this.summary.generateReport(prompt, researchData, fetchedSources);
+        task.report = finalReport;
+        emitStep('summary', 'Report Formatted', 'Markdown & citation matrix generated successfully', 'completed');
+      }
+
+      // 4. Verification Agent (if required by Planner)
+      if (plan.requiresVerification && task.report) {
+        task.status = 'verifying';
+        emitStep('verification', 'Generating Cryptographic Proof', 'Computing keccak256 hashes of prompt, output, and visited sources');
+        const proofMetadata = await this.verification.createProof(
+          executionId,
+          prompt,
+          steps,
+          task.report,
+          ownerWallet,
+          task.agentId
+        );
+        emitStep('verification', 'Proof Hashes Computed', `PromptHash: ${proofMetadata.promptHash.slice(0, 10)}... OutputHash: ${proofMetadata.outputHash.slice(0, 10)}...`, 'completed');
+
+        // 5. Proof Publisher (if required by Planner)
+        if (plan.requiresProofPublisher) {
+          emitStep('proof', 'Publishing Proof to RitualNet', 'Submitting transaction to WowWebProofRegistry (Chain ID: 1979)');
+          const publishedProof = await this.publisher.publishProof(proofMetadata);
+          task.proof = publishedProof;
+          emitStep('proof', 'Proof Anchored on RitualNet', `TxHash: ${publishedProof.transactionHash} (Chain ID: 1979)`, 'completed', { proof: publishedProof });
+        }
+      }
+
       task.status = 'completed';
       task.completedAt = Date.now();
-
-      emitStep('proof', 'Proof Anchored on RitualNet', `TxHash: ${publishedProof.transactionHash} (Chain ID: 1979)`, 'completed', { proof: publishedProof });
 
       return task;
     } catch (err: unknown) {
