@@ -1,5 +1,6 @@
 import { SourceCitation } from '@wowweb/shared';
 import { AIProvider } from './providers/AIProvider.js';
+import { ProviderFactory } from './providers/ProviderFactory.js';
 import { RetrievalEngine } from './RetrievalEngine.js';
 
 export interface SynthesizedResearch {
@@ -12,101 +13,88 @@ export interface SynthesizedResearch {
 
 export class ResearchAgent {
   private retriever = new RetrievalEngine();
+  private provider: AIProvider;
 
-  constructor(private provider?: AIProvider) {}
+  constructor(provider?: AIProvider) {
+    this.provider = provider || ProviderFactory.createProvider();
+  }
 
   async analyzeSources(prompt: string, sources: SourceCitation[]): Promise<SynthesizedResearch> {
-    const validSourcesCount = sources.filter(s => !s.snippet.startsWith('Failed')).length;
-    const confidenceScore = Math.min(98, 75 + validSourcesCount * 5);
-
-    const rankedChunks = this.retriever.rankChunks(prompt, sources);
-    const chunkContext = rankedChunks.map((c, i) => `[Source ${i + 1}] ${c.sourceTitle} (${c.url}): ${c.text}`).join('\n\n');
-
-    if (this.provider) {
-      try {
-        const responseText = await this.provider.chat({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are WowWeb Autonomous Research Agent. Synthesize source text chunks into JSON object containing: keyFindings (string array), pros (string array), cons (string array), comparisonTable (array of objects). Output valid JSON only.',
-            },
-            {
-              role: 'user',
-              content: `Query: "${prompt}"\n\nRanked Sources:\n${chunkContext}`,
-            },
-          ],
-          temperature: 0.2,
-          jsonOutput: true,
-        });
-
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return {
-            keyFindings: parsed.keyFindings || [],
-            pros: parsed.pros || [],
-            cons: parsed.cons || [],
-            comparisonTable: parsed.comparisonTable || [],
-            confidenceScore,
-          };
-        }
-      } catch {
-        // Fallback below
-      }
+    const validSources = sources.filter(s => !s.snippet.startsWith('Failed'));
+    if (validSources.length === 0) {
+      return {
+        keyFindings: [
+          `No relevant web sources found for query "${prompt}".`,
+          `Fact-checking engine requires verified external evidence before synthesizing architectural claims.`,
+        ],
+        pros: ['No unverified claims generated.'],
+        cons: ['Insufficient web search results to establish comparative consensus.'],
+        comparisonTable: [
+          {
+            feature: 'Web Research Evidence',
+            'WowWeb (RitualNet)': '0 verified web sources found',
+            'Standard Alternative': 'Unverified LLM hallucination',
+          },
+        ],
+        confidenceScore: 0,
+      };
     }
 
-    // Dynamic Synthesis Engine
-    const keyFindings = [
-      `Evaluated query "${prompt}" across ${validSourcesCount} verified knowledge sources.`,
-      `RitualNet provides native EVM execution (Chain ID: 1979) with enshrined AI precompiles (0x0801 HTTP, 0x0802 LLM, 0x0820 Autonomous Agents).`,
-      `WowWeb utilizes off-chain browser automation and anchors immutable keccak256 hash commitments on-chain.`,
-      `Every agent execution emits a verifiable receipt to WowWebProofRegistry on RitualNet for auditability.`,
-    ];
+    const confidenceScore = Math.min(98, 75 + validSources.length * 5);
+    const rankedChunks = this.retriever.rankChunks(prompt, validSources);
+    const chunkContext = rankedChunks.map((c, i) => `[Source ${i + 1}] ${c.sourceTitle} (${c.url}):\n${c.text}`).join('\n\n');
 
-    const pros = [
-      'Immutable on-chain verification guarantees execution integrity.',
-      'Symphony consensus and low block times (~350ms) enable rapid tx confirmation.',
-      'Enshrined AI precompiles reduce reliance on centralized web servers.',
-      'Privacy-preserving ECIES encryption via SecretsAccessControl.',
-    ];
+    try {
+      const responseText = await this.provider.chat({
+        messages: [
+          {
+            role: 'system',
+            content: `You are WowWeb Autonomous Research Agent. Analyze supplied source text chunks for query "${prompt}". Synthesize a JSON object with keys: keyFindings (array of 4 distinct bullet points based strictly on source text), pros (array of 3 advantages), cons (array of 2 tradeoffs), comparisonTable (array of objects comparing feature, WowWeb (RitualNet), Standard Alternative). Output valid JSON only.`,
+          },
+          {
+            role: 'user',
+            content: `Query: "${prompt}"\n\nRanked Sources Context:\n${chunkContext}`,
+          },
+        ],
+        temperature: 0.2,
+        jsonOutput: true,
+      });
 
-    const cons = [
-      'Requires gas management via RitualWallet for high-frequency transaction broadcasting.',
-      'Async execution pattern requires multi-phase event handling for long-running jobs.',
-    ];
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          keyFindings: parsed.keyFindings || validSources.map(s => `${s.title}: ${s.snippet.slice(0, 150)}...`),
+          pros: parsed.pros || ['Live web retrieval verified.', 'Direct source evidence.'],
+          cons: parsed.cons || ['Requires active Web3 RPC access.'],
+          comparisonTable: parsed.comparisonTable || [],
+          confidenceScore,
+        };
+      }
+    } catch {
+      // Dynamic fallback based strictly on actual crawled source snippets
+    }
 
-    const comparisonTable = [
-      {
-        feature: 'Execution Verification',
-        'WowWeb (RitualNet)': 'On-chain keccak256 proof commitments',
-        'Standard AI Chatbot': 'Unverifiable / Black-box',
-        'Web2 Browser Extension': 'Client-side only / No history audit',
-      },
-      {
-        feature: 'Agent Infrastructure',
-        'WowWeb (RitualNet)': 'Ritual Precompiles (0x0802 / 0x0820)',
-        'Standard AI Chatbot': 'Centralized API Gateway',
-        'Web2 Browser Extension': 'Local Browser Extension Script',
-      },
-      {
-        feature: 'Identity & Security',
-        'WowWeb (RitualNet)': 'Wallet Auth + EIP-4361 Signed Session',
-        'Standard AI Chatbot': 'Email / OAuth Password',
-        'Web2 Browser Extension': 'Local Storage / Unsigned Token',
-      },
-      {
-        feature: 'Proof Immutability',
-        'WowWeb (RitualNet)': 'Ritual Block Explorer Verified',
-        'Standard AI Chatbot': 'Database log (mutable)',
-        'Web2 Browser Extension': 'None',
-      },
-    ];
+    const dynamicFindings = validSources.slice(0, 4).map((s, idx) => 
+      `Source [${idx + 1}] ${s.title}: ${s.snippet.slice(0, 160)}...`
+    );
 
     return {
-      keyFindings,
-      pros,
-      cons,
-      comparisonTable,
+      keyFindings: dynamicFindings,
+      pros: [
+        `Extracted live text from ${validSources.length} web domains.`,
+        'Computed keccak256 hash commitments for source verification.',
+      ],
+      cons: [
+        'Requires continuous RPC availability on RitualNet.',
+      ],
+      comparisonTable: [
+        {
+          feature: 'Source Extraction',
+          'WowWeb (RitualNet)': `${validSources.length} verified web sources`,
+          'Standard Alternative': 'Closed static training data',
+        },
+      ],
       confidenceScore,
     };
   }
