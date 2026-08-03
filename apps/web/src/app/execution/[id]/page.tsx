@@ -17,7 +17,7 @@ export default function ExecutionViewerPage() {
 
   useEffect(() => {
     if (!id) return;
-    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || '';
     fetch(`${backendUrl}/api/agent/task/${id}`)
       .then(res => res.json())
       .then(data => {

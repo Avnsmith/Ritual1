@@ -14,7 +14,11 @@ import { agentRouter } from './routes/agent.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Health check
@@ -58,6 +62,10 @@ app.post('/api/auth/verify', async (req: Request, res: Response) => {
 // Agent execution router
 app.use('/api/agent', agentRouter);
 
-app.listen(PORT, () => {
-  console.log(`🚀 WowWeb Server running on port ${PORT} connected to RitualNet (Chain ID: 1979)`);
-});
+if (process.env.NODE_ENV !== 'production' || require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 WowWeb Server running on port ${PORT} connected to RitualNet (Chain ID: 1979)`);
+  });
+}
+
+export default app;

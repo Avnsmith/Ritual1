@@ -13,7 +13,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!address) return;
-    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || '';
     fetch(`${backendUrl}/api/agent/stats/${address}`)
       .then(res => res.json())
       .then(data => {

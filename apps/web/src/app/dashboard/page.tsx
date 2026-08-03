@@ -37,7 +37,7 @@ export default function DashboardPage() {
     setSteps([]);
     setCurrentTask(null);
 
-    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || '';
     const sseUrl = `${backendUrl}/api/agent/stream?prompt=${encodeURIComponent(targetPrompt)}&owner=${address}`;
 
     const eventSource = new EventSource(sseUrl);
