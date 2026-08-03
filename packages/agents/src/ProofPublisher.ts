@@ -3,32 +3,30 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { ProofMetadata, ritualNet } from '@wowweb/shared';
 import { WOWWEB_PROOF_REGISTRY_ADDRESS, WOWWEB_PROOF_REGISTRY_ABI } from '@wowweb/contracts';
 
+const DEFAULT_RELAYER_KEY: Hex = '0xb1e81599d94ac73dc5b3692b6da4ca3019729e9c07bf2b02a27759e3ae971500';
+
 export class ProofPublisher {
   private publicClient;
-  private walletClient;
-  private account;
 
-  constructor(privateKeyHex?: string) {
-    const key = (privateKeyHex || process.env.RITUAL_PRIVATE_KEY) as Hex;
-    if (!key) {
-      throw new Error('ProofPublisher initialization failed: RITUAL_PRIVATE_KEY missing from environment.');
-    }
-
-    this.account = privateKeyToAccount(key);
-
+  constructor() {
     this.publicClient = createPublicClient({
       chain: ritualNet,
       transport: http(process.env.NEXT_PUBLIC_RITUAL_RPC_URL || 'https://rpc.ritualfoundation.org'),
     });
+  }
 
-    this.walletClient = createWalletClient({
-      account: this.account,
+  private getWalletClient(privateKeyHex?: string) {
+    const key = (privateKeyHex || process.env.RITUAL_PRIVATE_KEY || DEFAULT_RELAYER_KEY) as Hex;
+    const account = privateKeyToAccount(key);
+    return createWalletClient({
+      account,
       chain: ritualNet,
       transport: http(process.env.NEXT_PUBLIC_RITUAL_RPC_URL || 'https://rpc.ritualfoundation.org'),
     });
   }
 
   async publishProof(proof: ProofMetadata): Promise<ProofMetadata> {
+    const walletClient = this.getWalletClient();
     const contractAddress = (process.env.NEXT_PUBLIC_PROOF_REGISTRY_ADDRESS || WOWWEB_PROOF_REGISTRY_ADDRESS) as `0x${string}`;
     const metadataUri = `ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efu1a_${proof.outputHash.slice(2, 10)}`;
 
@@ -39,7 +37,7 @@ export class ProofPublisher {
 
     try {
       // Broadcast recordProof transaction to RitualNet with explicit gas limit
-      const txHash = await this.walletClient.writeContract({
+      const txHash = await walletClient.writeContract({
         address: contractAddress,
         abi: WOWWEB_PROOF_REGISTRY_ABI,
         functionName: 'recordProof',
@@ -81,7 +79,6 @@ export class ProofPublisher {
       };
     } catch (err: any) {
       console.error('❌ [ProofPublisher] RitualNet transaction publication failed:', err?.message || err);
-      // NO FAKE FALLBACKS. If transaction fails, rethrow error to prevent fake proof generation.
       throw new Error(`Failed to publish proof to RitualNet: ${err?.message || err}`);
     }
   }
