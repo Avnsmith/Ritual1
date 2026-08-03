@@ -33,22 +33,24 @@ export class ProofPublisher {
     console.log(`📡 [ProofPublisher] Submitting proof transaction to RitualNet...`);
 
     let attempts = 0;
-    let txHash: `0x${string}` | null = null;
+    let lastError: any = null;
 
-    while (attempts < 3) {
+    while (attempts < 4) {
       try {
         attempts++;
-        const nonce = await this.publicClient.getTransactionCount({
+        const latestNonce = await this.publicClient.getTransactionCount({
           address: walletClient.account.address,
-          blockTag: 'pending',
+          blockTag: 'latest',
         });
 
-        txHash = await walletClient.writeContract({
+        const targetNonce = latestNonce + (attempts - 1);
+
+        const txHash = await walletClient.writeContract({
           address: contractAddress,
           abi: WOWWEB_PROOF_REGISTRY_ABI,
           functionName: 'recordProof',
-          gas: 500000n,
-          nonce,
+          gas: 600000n,
+          nonce: targetNonce,
           args: [
             proof.executionId,
             proof.promptHash,
@@ -61,40 +63,30 @@ export class ProofPublisher {
           ],
         });
 
-        break;
-      } catch (err: any) {
-        if (attempts >= 3) {
-          throw new Error(`Failed to publish proof to RitualNet after ${attempts} attempts: ${err?.message || err}`);
+        console.log(`⏳ [ProofPublisher] Tx broadcasted: ${txHash} (Nonce: ${targetNonce}). Waiting for RitualNet block confirmation...`);
+
+        const receipt = await this.publicClient.waitForTransactionReceipt({
+          hash: txHash,
+        });
+
+        if (receipt.status === 'success') {
+          console.log(`✅ [ProofPublisher] Proof Mined on RitualNet! Block: ${receipt.blockNumber}`);
+          return {
+            ...proof,
+            transactionHash: txHash,
+            blockNumber: Number(receipt.blockNumber),
+            explorerUrl: `https://explorer.ritualfoundation.org/tx/${txHash}`,
+            isVerified: true,
+            status: 'Verified',
+          };
         }
-        await new Promise(res => setTimeout(res, 1000));
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`⚠️ [ProofPublisher] Attempt ${attempts} failed: ${err?.message || err}. Retrying...`);
+        await new Promise(res => setTimeout(res, 1500));
       }
     }
 
-    if (!txHash) {
-      throw new Error('Failed to obtain transaction hash from RitualNet relayer client.');
-    }
-
-    console.log(`⏳ [ProofPublisher] Tx broadcasted: ${txHash}. Waiting for RitualNet block confirmation...`);
-
-    const receipt = await this.publicClient.waitForTransactionReceipt({
-      hash: txHash,
-    });
-
-    console.log(`✅ [ProofPublisher] Proof Mined on RitualNet! Block: ${receipt.blockNumber}, Status: ${receipt.status}`);
-
-    if (receipt.status !== 'success') {
-      throw new Error(`RitualNet transaction reverted: ${txHash}`);
-    }
-
-    const explorerUrl = `https://explorer.ritualfoundation.org/tx/${txHash}`;
-
-    return {
-      ...proof,
-      transactionHash: txHash,
-      blockNumber: Number(receipt.blockNumber),
-      explorerUrl,
-      isVerified: true,
-      status: 'Verified',
-    };
+    throw new Error(`Failed to publish proof to RitualNet: ${lastError?.message || lastError}`);
   }
 }
