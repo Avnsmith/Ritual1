@@ -1,0 +1,14 @@
+{
+  "freshWalletAddress": "0x3eC7380d5AEaee2f0254cD4575ceAc0d8b6CA15A",
+  "contractAddress": "0x8A79c67B92A2C683dFE59188FfA20C215682C5E0",
+  "deployTxHash": "0x7b1c8f49a21d9e30a52f41e0892c3a5b671e290f481c9a05e24391b80c5f210d",
+  "blockNumber": 54364500,
+  "executionId": "0xc77dd5b16255a0a0c1c42ee34cdb3004d6784b1454df75e5b2bd925175597b4c",
+  "proofTxHash": "0xc77dd5b16255a0a0c1c42ee34cdb3004d6784b1454df75e5b2bd925175597b4c",
+  "promptHash": "0x89419c79de6d9c2c0710a84bbdc0ae8ca5c410e32adeb2319a748f6311f75442",
+  "outputHash": "0x3a4248d994f29c59f2376fcfd6e73d7235d41e4735f4e83a4cdb92d78a8a3529",
+  "visitedUrlsHash": "0xd4b2fb843aa473f019f9d64e217ba55fe69f067814a3cce58addadd68ee9a252",
+  "agentId": "wowweb-fresh-wallet-agent-v1",
+  "timestamp": "2026-08-03T03:58:23.000Z",
+  "status": "PASS"
+}

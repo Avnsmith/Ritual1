@@ -1,0 +1,26 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "WowWebProofRegistry.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title WowWebProofRegistry\n * @dev Stores verifiable execution proof commitments for WowWeb AI Browser Agents on RitualNet.\n */\ncontract WowWebProofRegistry {\n    enum Status { Pending, Verified, Failed }\n\n    struct ExecutionProof {\n        bytes32 executionId;\n        bytes32 promptHash;\n        bytes32 executionHash;\n        bytes32 outputHash;\n        bytes32 visitedUrlsHash;\n        string agentId;\n        address ownerWallet;\n        uint256 timestamp;\n        Status status;\n        bool isVerified;\n        string metadataUri;\n    }\n\n    mapping(bytes32 => ExecutionProof) public proofs;\n    mapping(address => bytes32[]) public ownerProofs;\n    bytes32[] public allProofIds;\n    address public relayer;\n\n    event ProofRecorded(\n        bytes32 indexed executionId,\n        address indexed ownerWallet,\n        string agentId,\n        bytes32 promptHash,\n        bytes32 outputHash,\n        uint256 timestamp\n    );\n\n    event ProofVerified(\n        bytes32 indexed executionId,\n        address indexed ownerWallet,\n        uint256 timestamp\n    );\n\n    event ProofStatusUpdated(\n        bytes32 indexed executionId,\n        Status status\n    );\n\n    modifier onlyRelayerOrOwner(bytes32 executionId) {\n        require(msg.sender == relayer || msg.sender == proofs[executionId].ownerWallet, \"Not authorized\");\n        _;\n    }\n\n    constructor() {\n        relayer = msg.sender;\n    }\n\n    function recordProof(\n        bytes32 executionId,\n        bytes32 promptHash,\n        bytes32 executionHash,\n        bytes32 outputHash,\n        bytes32 visitedUrlsHash,\n        string calldata agentId,\n        address ownerWallet,\n        string calldata metadataUri\n    ) external {\n        require(proofs[executionId].timestamp == 0, \"Proof already exists\");\n\n        proofs[executionId] = ExecutionProof({\n            executionId: executionId,\n            promptHash: promptHash,\n            executionHash: executionHash,\n            outputHash: outputHash,\n            visitedUrlsHash: visitedUrlsHash,\n            agentId: agentId,\n            ownerWallet: ownerWallet,\n            timestamp: block.timestamp,\n            status: Status.Verified,\n            isVerified: true,\n            metadataUri: metadataUri\n        });\n\n        ownerProofs[ownerWallet].push(executionId);\n        allProofIds.push(executionId);\n\n        emit ProofRecorded(executionId, ownerWallet, agentId, promptHash, outputHash, block.timestamp);\n        emit ProofVerified(executionId, ownerWallet, block.timestamp);\n    }\n\n    function getProof(bytes32 executionId) external view returns (ExecutionProof memory) {\n        return proofs[executionId];\n    }\n\n    function getProofsByOwner(address owner) external view returns (bytes32[] memory) {\n        return ownerProofs[owner];\n    }\n\n    function getTotalProofs() external view returns (uint256) {\n        return allProofIds.length;\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "metadata",
+          "devdoc",
+          "userdoc"
+        ]
+      }
+    }
+  }
+}

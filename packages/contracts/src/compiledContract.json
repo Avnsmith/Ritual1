@@ -1,0 +1,378 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "ownerWallet",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "agentId",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "promptHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "outputHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "ProofRecorded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum WowWebProofRegistry.Status",
+          "name": "status",
+          "type": "uint8"
+        }
+      ],
+      "name": "ProofStatusUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "ownerWallet",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "ProofVerified",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "allProofIds",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getProof",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "executionId",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "promptHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "executionHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "outputHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "visitedUrlsHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "agentId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "ownerWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum WowWebProofRegistry.Status",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "isVerified",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct WowWebProofRegistry.ExecutionProof",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "getProofsByOwner",
+      "outputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "",
+          "type": "bytes32[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalProofs",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "ownerProofs",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "proofs",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "promptHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "executionHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "outputHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "visitedUrlsHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "agentId",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "ownerWallet",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum WowWebProofRegistry.Status",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bool",
+          "name": "isVerified",
+          "type": "bool"
+        },
+        {
+          "internalType": "string",
+          "name": "metadataUri",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "executionId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "promptHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "executionHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "outputHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "visitedUrlsHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "agentId",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "ownerWallet",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "metadataUri",
+          "type": "string"
+        }
+      ],
+      "name": "recordProof",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "relayer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561000f575f80fd5b50600380546001600160a01b03191633179055610e048061002f5f395ff3fe608060405234801561000f575f80fd5b5060043610610085575f3560e01c806377b0a9171161005857806377b0a917146101125780638406c079146101255780639b1bc0c9146101505780639d68b43414610158575f80fd5b80631b80bb3a1461008957806321ec7a92146100b2578063444d95b0146100c75780634939b442146100f1575b5f80fd5b61009c6100973660046108bf565b610178565b6040516100a9919061094d565b60405180910390f35b6100c56100c0366004610a74565b6103ae565b005b6100da6100d53660046108bf565b610697565b6040516100a99b9a99989796959493929190610b23565b6101046100ff366004610ba8565b61080c565b6040519081526020016100a9565b6101046101203660046108bf565b610837565b600354610138906001600160a01b031681565b6040516001600160a01b0390911681526020016100a9565b600254610104565b61016b610166366004610bd0565b610856565b6040516100a99190610bf0565b6101d360408051610160810182525f8082526020820181905291810182905260608082018390526080820183905260a082015260c0810182905260e081018290529061010082019081525f6020820152606060409091015290565b5f808381526020019081526020015f20604051806101600160405290815f82015481526020016001820154815260200160028201548152602001600382015481526020016004820154815260200160058201805461023090610c33565b80601f016020809104026020016040519081016040528092919081815260200182805461025c90610c33565b80156102a75780601f1061027e576101008083540402835291602001916102a7565b820191905f5260205f20905b81548152906001019060200180831161028a57829003601f168201915b505050918352505060068201546001600160a01b0316602082015260078201546040820152600882015460609091019060ff1660028111156102eb576102eb610919565b60028111156102fc576102fc610919565b81526008820154610100900460ff161515602082015260098201805460409092019161032790610c33565b80601f016020809104026020016040519081016040528092919081815260200182805461035390610c33565b801561039e5780601f106103755761010080835404028352916020019161039e565b820191905f5260205f20905b81548152906001019060200180831161038157829003601f168201915b5050505050815250509050919050565b5f8a815260208190526040902060070154156104075760405162461bcd60e51b815260206004820152601460248201527350726f6f6620616c72656164792065786973747360601b604482015260640160405180910390fd5b6040518061016001604052808b81526020018a815260200189815260200188815260200187815260200186868080601f0160208091040260200160405190810160405280939291908181526020018383808284375f920191909152505050908252506001600160a01b03851660208201524260408201526060016001815260200160011515815260200183838080601f0160208091040260200160405190810160405280939291908181526020018383808284375f9201829052509390945250508c8152602081815260409182902084518155908401516001820155908301516002820155606083015160038201556080830151600482015560a083015190915060058201906105179082610ccd565b5060c08201516006820180546001600160a01b0319166001600160a01b0390921691909117905560e0820151600782015561010082015160088201805460ff1916600183600281111561056c5761056c610919565b02179055506101208201516008820180549115156101000261ff001990921691909117905561014082015160098201906105a69082610ccd565b5050506001600160a01b0383165f818152600160208181526040808420805480850182559085529184209091018e90556002805492830181559092527f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace018c9055518b907fa0cb8f5eb14b485423097e35141878739f3433b978622e92d850ebc787e98ad99061063f90899089908f908e904290610d89565b60405180910390a3826001600160a01b03168a7f3cbbb4765049102f7d16784aa5e5d53a1f94d5da6878a63974ffabb4989147d64260405161068391815260200190565b60405180910390a350505050505050505050565b5f602052805f5260405f205f91509050805f0154908060010154908060020154908060030154908060040154908060050180546106d390610c33565b80601f01602080910402602001604051908101604052809291908181526020018280546106ff90610c33565b801561074a5780601f106107215761010080835404028352916020019161074a565b820191905f5260205f20905b81548152906001019060200180831161072d57829003601f168201915b5050505060068301546007840154600885015460098601805495966001600160a01b039094169592945060ff80831694610100909304169261078b90610c33565b80601f01602080910402602001604051908101604052809291908181526020018280546107b790610c33565b80156108025780601f106107d957610100808354040283529160200191610802565b820191905f5260205f20905b8154815290600101906020018083116107e557829003601f168201915b505050505090508b565b6001602052815f5260405f208181548110610825575f80fd5b905f5260205f20015f91509150505481565b60028181548110610846575f80fd5b5f91825260209091200154905081565b6001600160a01b0381165f908152600160209081526040918290208054835181840281018401909452808452606093928301828280156108b357602002820191905f5260205f20905b81548152602001906001019080831161089f575b50505050509050919050565b5f602082840312156108cf575f80fd5b5035919050565b5f81518084525f5b818110156108fa576020818501810151868301820152016108de565b505f602082860101526020601f19601f83011685010191505092915050565b634e487b7160e01b5f52602160045260245ffd5b6003811061094957634e487b7160e01b5f52602160045260245ffd5b9052565b6020815281516020820152602082015160408201526040820151606082015260608201516080820152608082015160a08201525f60a08301516101608060c085015261099d6101808501836108d6565b915060c08501516109b960e08601826001600160a01b03169052565b5060e0850151610100858101919091528501516101206109db8187018361092d565b86015190506101406109f08682018315159052565b860151858403601f1901838701529050610a0a83826108d6565b9695505050505050565b5f8083601f840112610a24575f80fd5b50813567ffffffffffffffff811115610a3b575f80fd5b602083019150836020828501011115610a52575f80fd5b9250929050565b80356001600160a01b0381168114610a6f575f80fd5b919050565b5f805f805f805f805f806101008b8d031215610a8e575f80fd5b8a35995060208b0135985060408b0135975060608b0135965060808b0135955060a08b013567ffffffffffffffff80821115610ac8575f80fd5b610ad48e838f01610a14565b9097509550859150610ae860c08e01610a59565b945060e08d0135915080821115610afd575f80fd5b50610b0a8d828e01610a14565b915080935050809150509295989b9194979a5092959850565b5f6101608d83528c60208401528b60408401528a60608401528960808401528060a0840152610b548184018a6108d6565b6001600160a01b03891660c085015260e084018890529050610b7a61010084018761092d565b841515610120840152828103610140840152610b9681856108d6565b9e9d5050505050505050505050505050565b5f8060408385031215610bb9575f80fd5b610bc283610a59565b946020939093013593505050565b5f60208284031215610be0575f80fd5b610be982610a59565b9392505050565b602080825282518282018190525f9190848201906040850190845b81811015610c2757835183529284019291840191600101610c0b565b50909695505050505050565b600181811c90821680610c4757607f821691505b602082108103610c6557634e487b7160e01b5f52602260045260245ffd5b50919050565b634e487b7160e01b5f52604160045260245ffd5b601f821115610cc8575f81815260208120601f850160051c81016020861015610ca55750805b601f850160051c820191505b81811015610cc457828155600101610cb1565b5050505b505050565b815167ffffffffffffffff811115610ce757610ce7610c6b565b610cfb81610cf58454610c33565b84610c7f565b602080601f831160018114610d2e575f8415610d175750858301515b5f19600386901b1c1916600185901b178555610cc4565b5f85815260208120601f198616915b82811015610d5c57888601518255948401946001909101908401610d3d565b5085821015610d7957878501515f19600388901b60f8161c191681555b5050505050600190811b01905550565b60808152846080820152848660a08301375f60a086830101525f60a0601f19601f8801168301019050846020830152836040830152826060830152969550505050505056fea2646970667358221220df5823793c3f8f344954894c91f17b0063ee211aa119813162b3dc37fabfac5964736f6c63430008140033"
+}
