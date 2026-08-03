@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Sliders, Key, Cpu, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { X, Sliders, Key, Cpu, ShieldCheck, Check, Sparkles, Server } from 'lucide-react';
 import { AIProviderConfig } from '@wowweb/agents';
 
 interface SettingsModalProps {
@@ -49,93 +49,98 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 1000);
+    }, 800);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg glass-panel rounded-2xl p-6 border border-border shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg glass-panel rounded-2xl p-6 border border-accent/40 shadow-2xl space-y-6 bg-zinc-950/90 text-zinc-100">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-surface transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
+        <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+          <div className="w-10 h-10 rounded-xl bg-accent/20 border border-accent/50 flex items-center justify-center text-accent">
             <Sliders className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               AI Provider Settings <Sparkles className="w-4 h-4 text-accent" />
             </h3>
-            <p className="text-xs text-zinc-400">Configure LLM Provider, API Key, and Model Parameters</p>
+            <p className="text-xs text-zinc-400">Configure LLM Provider, API Keys, and Inference Parameters</p>
           </div>
         </div>
 
-        {/* Provider Selection Tabs */}
+        {/* Provider Selector Grid */}
         <div className="space-y-2">
-          <label className="text-xs font-mono text-zinc-400">Select AI Provider</label>
+          <label className="text-xs font-mono text-zinc-300 font-semibold flex items-center gap-1.5">
+            <Server className="w-3.5 h-3.5 text-accent" /> Select AI Provider
+          </label>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 'openai', label: 'OpenAI' },
-              { id: 'gemini', label: 'Gemini' },
-              { id: 'anthropic', label: 'Anthropic' },
-              { id: 'groq', label: 'Groq' },
-              { id: 'openrouter', label: 'OpenRouter' },
-              { id: 'ollama', label: 'Ollama' },
+              { id: 'openai', label: 'OpenAI', desc: 'GPT-4o / GPT-4.1' },
+              { id: 'gemini', label: 'Gemini', desc: 'Gemini 1.5 / 2.5' },
+              { id: 'anthropic', label: 'Anthropic', desc: 'Claude 3.5 Sonnet' },
+              { id: 'groq', label: 'Groq', desc: 'Llama-3.1 Instant' },
+              { id: 'openrouter', label: 'OpenRouter', desc: 'Universal API' },
+              { id: 'ollama', label: 'Ollama', desc: 'Local LLM' },
             ].map(p => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => handleProviderChange(p.id as any)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                className={`p-2.5 rounded-xl text-left border transition-all ${
                   provider === p.id
-                    ? 'bg-accent/10 border-accent text-accent'
-                    : 'bg-surface border-border text-zinc-400 hover:text-white'
+                    ? 'bg-accent/20 border-accent text-accent shadow-md shadow-accent/10'
+                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
                 }`}
               >
-                {p.label}
+                <div className="text-xs font-bold">{p.label}</div>
+                <div className="text-[10px] text-zinc-500 truncate">{p.desc}</div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* API Key Field */}
+        {/* API Key Input Field */}
         <div className="space-y-2">
-          <label className="text-xs font-mono text-zinc-400 flex items-center justify-between">
-            <span className="flex items-center gap-1.5"><Key className="w-3.5 h-3.5 text-accent" /> API Key</span>
-            <span className="text-[10px] text-zinc-500">Stored locally in browser only</span>
+          <label className="text-xs font-mono text-zinc-300 font-semibold flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-accent" /> {provider.toUpperCase()} API Key
+            </span>
+            <span className="text-[10px] text-zinc-400">Stored in localStorage only</span>
           </label>
           <input
             type="password"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder={provider === 'ollama' ? 'Not required for local Ollama' : `Enter your ${provider.toUpperCase()} API Key (sk-...)`}
-            className="w-full px-4 py-3 rounded-xl bg-elevated border border-border text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent transition-colors font-mono"
+            placeholder={provider === 'ollama' ? 'Not required for local Ollama' : `Enter your ${provider.toUpperCase()} API Key (e.g. sk-...)`}
+            className="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent transition-colors font-mono"
           />
         </div>
 
-        {/* Model Selection */}
+        {/* Model & Temperature */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-xs font-mono text-zinc-400 flex items-center gap-1.5">
+            <label className="text-xs font-mono text-zinc-300 font-semibold flex items-center gap-1.5">
               <Cpu className="w-3.5 h-3.5 text-purple-400" /> Target Model
             </label>
             <input
               type="text"
               value={model}
               onChange={e => setModel(e.target.value)}
-              placeholder="e.g. gpt-4o-mini"
-              className="w-full px-3 py-2.5 rounded-xl bg-elevated border border-border text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent transition-colors font-mono"
+              placeholder="Model identifier"
+              className="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent transition-colors font-mono"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-mono text-zinc-400 flex items-center justify-between">
+            <label className="text-xs font-mono text-zinc-300 font-semibold flex items-center justify-between">
               <span>Temperature</span>
-              <span className="text-accent">{temperature}</span>
+              <span className="text-accent font-bold">{temperature}</span>
             </label>
             <input
               type="range"
@@ -144,16 +149,16 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
               step="0.1"
               value={temperature}
               onChange={e => setTemperature(parseFloat(e.target.value))}
-              className="w-full accent-accent"
+              className="w-full accent-accent cursor-pointer"
             />
           </div>
         </div>
 
-        {/* Security Notice */}
-        <div className="p-3 rounded-xl bg-surface border border-border flex items-start gap-2.5 text-[11px] text-zinc-400">
+        {/* Security Guarantee */}
+        <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex items-start gap-2.5 text-[11px] text-zinc-400">
           <ShieldCheck className="w-4 h-4 text-ritual shrink-0 mt-0.5" />
           <span>
-            API Keys are stored strictly in your browser&apos;s <code className="text-zinc-200">localStorage</code>. They are never saved on servers or tracked in commits.
+            API Keys are stored exclusively in your browser&apos;s <code className="text-zinc-200 font-mono">localStorage</code>. They are never saved on remote servers or committed to repositories.
           </span>
         </div>
 
@@ -161,15 +166,15 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
         <button
           type="button"
           onClick={handleSave}
-          className="w-full py-3 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
         >
           {savedSuccess ? (
             <>
               <Check className="w-4 h-4" />
-              <span>Settings Saved Successfully!</span>
+              <span>Settings Saved!</span>
             </>
           ) : (
-            <span>Save Settings</span>
+            <span>Save &amp; Apply Provider Settings</span>
           )}
         </button>
       </div>

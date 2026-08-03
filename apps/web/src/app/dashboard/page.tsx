@@ -7,7 +7,7 @@ import { ExecutionTimeline } from '../../components/ExecutionTimeline';
 import { ReportViewer } from '../../components/ReportViewer';
 import { SourcePanel } from '../../components/SourcePanel';
 import { AgentTask, ExecutionStep } from '@wowweb/shared';
-import { Search, Sparkles, ShieldCheck, Terminal, Compass, ArrowRight, Loader2, Settings, Globe } from 'lucide-react';
+import { Search, Sparkles, ShieldCheck, Terminal, Compass, ArrowRight, Loader2, Settings, Globe, Key, Cpu, Server } from 'lucide-react';
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
@@ -17,6 +17,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [currentTask, setCurrentTask] = useState<AgentTask | null>(null);
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
+
+  const activeOwner = address || '0x49d50AC6842162332cc2FfC8E5A1813c2035e40e';
 
   const suggestedPrompts = [
     'Research RitualNet AI precompiles 0x0801 and 0x0802',
@@ -29,11 +31,6 @@ export default function DashboardPage() {
     const targetPrompt = queryPrompt || prompt;
     if (!targetPrompt.trim()) return;
 
-    if (!isConnected || !address) {
-      setIsModalOpen(true);
-      return;
-    }
-
     setLoading(true);
     setSteps([]);
     setCurrentTask(null);
@@ -41,7 +38,7 @@ export default function DashboardPage() {
     const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || '';
     const params = new URLSearchParams({
       prompt: targetPrompt,
-      owner: address,
+      owner: activeOwner,
       provider: aiConfig.provider || 'openai',
       ...(aiConfig.apiKey ? { apiKey: aiConfig.apiKey } : {}),
       ...(aiConfig.model ? { model: aiConfig.model } : {}),
@@ -79,7 +76,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 py-4">
-      {/* Top Banner / Welcome */}
+      {/* Header Banner */}
       <div className="glass-panel rounded-2xl p-6 border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
@@ -91,14 +88,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-zinc-300 hover:border-accent hover:text-accent transition-colors flex items-center gap-1.5"
-          >
-            <Settings className="w-3.5 h-3.5 text-accent" />
-            <span className="font-mono text-[11px]">Provider: {aiConfig.provider.toUpperCase()}</span>
-          </button>
-
           {address ? (
             <div className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-mono text-zinc-300 flex items-center gap-2 shrink-0">
               <ShieldCheck className="w-4 h-4 text-ritual" />
@@ -107,12 +96,42 @@ export default function DashboardPage() {
           ) : (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
+              className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs text-zinc-400 hover:text-white transition-colors shrink-0 flex items-center gap-1.5"
             >
-              Connect Wallet to Start
+              <ShieldCheck className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Connect Wallet (Optional)</span>
             </button>
           )}
         </div>
+      </div>
+
+      {/* AI Settings Quick Bar */}
+      <div className="p-4 rounded-2xl bg-zinc-900/90 border border-accent/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center text-accent">
+            <Server className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white flex items-center gap-2">
+              <span>Active AI Provider:</span>
+              <span className="px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-mono uppercase">
+                {aiConfig.provider || 'OPENAI'} ({aiConfig.model || 'gpt-4o-mini'})
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-400 flex items-center gap-2">
+              <span>Key Status: {aiConfig.apiKey ? '🟢 Custom Key Configured' : '🟡 System Default Relayer Key'}</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+          className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-all shadow-md shadow-accent/20 flex items-center justify-center gap-2 shrink-0"
+        >
+          <Settings className="w-4 h-4" />
+          <span>⚙ Configure AI Settings &amp; API Keys</span>
+        </button>
       </div>
 
       {/* Main Command Bar Input */}
@@ -156,7 +175,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Execution Timeline (Visible during execution or after) */}
+      {/* Execution Timeline */}
       {steps.length > 0 && (
         <div className="glass-panel rounded-2xl p-6 border border-border">
           <ExecutionTimeline steps={steps} />
