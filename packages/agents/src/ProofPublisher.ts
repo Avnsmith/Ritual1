@@ -35,20 +35,14 @@ export class ProofPublisher {
     let attempts = 0;
     let lastError: any = null;
 
-    while (attempts < 5) {
+    while (attempts < 4) {
       try {
         attempts++;
-        const pendingCount = await this.publicClient.getTransactionCount({
-          address: walletClient.account.address,
-          blockTag: 'pending',
-        });
-
         const txHash = await walletClient.writeContract({
           address: contractAddress,
           abi: WOWWEB_PROOF_REGISTRY_ABI,
           functionName: 'recordProof',
           gas: 600000n,
-          nonce: pendingCount > 0 ? pendingCount : undefined,
           args: [
             proof.executionId,
             proof.promptHash,
@@ -81,7 +75,7 @@ export class ProofPublisher {
       } catch (err: any) {
         lastError = err;
         console.warn(`⚠️ [ProofPublisher] Attempt ${attempts} failed: ${err?.message || err}. Retrying...`);
-        await new Promise(res => setTimeout(res, 2000));
+        await new Promise(res => setTimeout(res, 1500));
       }
     }
 
