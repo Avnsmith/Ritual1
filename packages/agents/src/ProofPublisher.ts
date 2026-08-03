@@ -35,22 +35,20 @@ export class ProofPublisher {
     let attempts = 0;
     let lastError: any = null;
 
-    while (attempts < 4) {
+    while (attempts < 5) {
       try {
         attempts++;
-        const latestNonce = await this.publicClient.getTransactionCount({
+        const pendingCount = await this.publicClient.getTransactionCount({
           address: walletClient.account.address,
-          blockTag: 'latest',
+          blockTag: 'pending',
         });
-
-        const targetNonce = latestNonce + (attempts - 1);
 
         const txHash = await walletClient.writeContract({
           address: contractAddress,
           abi: WOWWEB_PROOF_REGISTRY_ABI,
           functionName: 'recordProof',
           gas: 600000n,
-          nonce: targetNonce,
+          nonce: pendingCount > 0 ? pendingCount : undefined,
           args: [
             proof.executionId,
             proof.promptHash,
@@ -63,7 +61,7 @@ export class ProofPublisher {
           ],
         });
 
-        console.log(`⏳ [ProofPublisher] Tx broadcasted: ${txHash} (Nonce: ${targetNonce}). Waiting for RitualNet block confirmation...`);
+        console.log(`⏳ [ProofPublisher] Tx broadcasted: ${txHash}. Waiting for RitualNet block confirmation...`);
 
         const receipt = await this.publicClient.waitForTransactionReceipt({
           hash: txHash,
@@ -83,7 +81,7 @@ export class ProofPublisher {
       } catch (err: any) {
         lastError = err;
         console.warn(`⚠️ [ProofPublisher] Attempt ${attempts} failed: ${err?.message || err}. Retrying...`);
-        await new Promise(res => setTimeout(res, 1500));
+        await new Promise(res => setTimeout(res, 2000));
       }
     }
 
