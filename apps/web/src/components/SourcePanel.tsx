@@ -1,66 +1,79 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SourceCitation, SourceCategory } from '@wowweb/shared';
-import { ExternalLink, Globe, Hash, Clock, X } from 'lucide-react';
+import { SourceCitation } from '@wowweb/shared';
+import { ExternalLink, Globe, Hash, Clock, X, FileText, Code, BookOpen, Newspaper, MessageSquare, ShieldCheck } from 'lucide-react';
 
 interface SourcePanelProps {
   sources: SourceCitation[];
 }
 
 export function SourcePanel({ sources }: SourcePanelProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [activePreview, setActivePreview] = useState<SourceCitation | null>(null);
 
   if (!sources || sources.length === 0) {
     return (
-      <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-slate-500 text-xs">
+      <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-slate-500 text-xs font-mono">
         No sources crawled yet.
       </div>
     );
   }
 
-  const categories: { label: string; key: string }[] = [
-    { label: 'All', key: 'all' },
-    { label: 'Github', key: 'github' },
-    { label: 'Medium', key: 'medium' },
-    { label: 'Docs', key: 'docs' },
-    { label: 'Whitepaper', key: 'whitepaper' },
-    { label: 'Twitter', key: 'twitter' },
-    { label: 'Arxiv', key: 'arxiv' },
+  const groups = [
+    { key: 'all', label: 'All Sources', icon: Globe },
+    { key: 'official', label: 'Official Docs', icon: ShieldCheck },
+    { key: 'github', label: 'GitHub Repos', icon: Code },
+    { key: 'tech', label: 'Tech Documentation', icon: BookOpen },
+    { key: 'academic', label: 'Academic Papers', icon: FileText },
+    { key: 'news', label: 'News & Blogs', icon: Newspaper },
+    { key: 'community', label: 'Community', icon: MessageSquare },
   ];
 
-  const filteredSources = selectedCategory === 'all'
+  const mapToGroup = (src: SourceCitation): string => {
+    const url = src.url.toLowerCase();
+    if (url.includes('ritual') || url.includes('official') || url.includes('foundation')) return 'official';
+    if (url.includes('github.com')) return 'github';
+    if (url.includes('docs') || url.includes('gitbook') || url.includes('readme')) return 'tech';
+    if (url.includes('arxiv.org') || url.includes('paper') || url.includes('pdf')) return 'academic';
+    if (url.includes('medium.com') || url.includes('substack.com') || url.includes('news')) return 'news';
+    if (url.includes('twitter.com') || url.includes('x.com') || url.includes('reddit')) return 'community';
+    return 'tech';
+  };
+
+  const filteredSources = selectedGroup === 'all'
     ? sources
-    : sources.filter((s) => s.category === selectedCategory || (selectedCategory === 'docs' && s.url.includes('docs')));
+    : sources.filter((s) => mapToGroup(s) === selectedGroup);
 
   return (
-    <div className="space-y-4 select-none">
-      {/* Category Pills Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 select-none font-sans">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-purple-400 flex items-center gap-2">
-          <span>Sources & Citations</span>
+          <span>Sources &amp; Evidence</span>
           <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 text-[10px] border border-purple-800/60">
             {sources.length}
           </span>
         </h3>
       </div>
 
-      {/* Category Filters */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]">
-        {categories.map((cat) => {
-          const isActive = selectedCategory === cat.key;
+      {/* Category Pills */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px]">
+        {groups.map((grp) => {
+          const Icon = grp.icon;
+          const isActive = selectedGroup === grp.key;
           return (
             <button
-              key={cat.key}
-              onClick={() => setSelectedCategory(cat.key)}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap ${
+              key={grp.key}
+              onClick={() => setSelectedGroup(grp.key)}
+              className={`px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 isActive
                   ? 'bg-purple-900/80 text-purple-200 border border-purple-700 shadow-sm'
                   : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
               }`}
             >
-              {cat.label}
+              <Icon className="w-3 h-3 text-purple-400" />
+              <span>{grp.label}</span>
             </button>
           );
         })}
@@ -102,7 +115,7 @@ export function SourcePanel({ sources }: SourcePanelProps) {
                   <Globe className="w-3 h-3 text-slate-500" /> {domain}
                 </span>
                 <span className="px-1.5 py-0.5 rounded bg-slate-900 text-purple-400 uppercase text-[9px]">
-                  {src.category || 'web'}
+                  {mapToGroup(src).toUpperCase()}
                 </span>
               </div>
             </div>
@@ -117,7 +130,7 @@ export function SourcePanel({ sources }: SourcePanelProps) {
             <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
               <div>
                 <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[10px] font-mono uppercase">
-                  {activePreview.category || 'Source Preview'}
+                  {mapToGroup(activePreview).toUpperCase()}
                 </span>
                 <h3 className="text-base font-bold text-white mt-1">{activePreview.title}</h3>
               </div>

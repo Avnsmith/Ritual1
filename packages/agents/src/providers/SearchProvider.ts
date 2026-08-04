@@ -15,13 +15,13 @@ export interface SearchProvider {
 export function categorizeUrl(url: string): SourceCategory {
   const lower = url.toLowerCase();
   if (lower.includes('github.com')) return 'github';
-  if (lower.includes('medium.com') || lower.includes('substack.com')) return 'medium';
-  if (lower.includes('arxiv.org')) return 'arxiv';
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return 'twitter';
-  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+  if (lower.includes('arxiv.org')) return 'academic';
+  if (lower.includes('twitter.com') || lower.includes('x.com') || lower.includes('reddit.com')) return 'community';
   if (lower.includes('docs.') || lower.includes('/docs/') || lower.includes('gitbook') || lower.includes('readme.io')) return 'docs';
   if (lower.includes('pdf') || lower.includes('paper') || lower.includes('whitepaper')) return 'whitepaper';
+  if (lower.includes('medium.com') || lower.includes('substack.com') || lower.includes('news')) return 'news';
   if (lower.includes('blog')) return 'blog';
+  if (lower.includes('ritual')) return 'official';
   return 'general';
 }
 

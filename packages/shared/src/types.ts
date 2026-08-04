@@ -17,10 +17,21 @@ export interface ExecutionStep {
   description: string;
   timestamp: number;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  durationMs?: number;
+  sourcesCount?: number;
   details?: Record<string, unknown>;
 }
 
-export type SourceCategory = 'github' | 'medium' | 'docs' | 'whitepaper' | 'twitter' | 'arxiv' | 'youtube' | 'blog' | 'general';
+export type SourceCategory = 
+  | 'official' 
+  | 'github' 
+  | 'docs' 
+  | 'academic' 
+  | 'news' 
+  | 'community' 
+  | 'whitepaper' 
+  | 'blog' 
+  | 'general';
 
 export interface SourceCitation {
   title: string;
@@ -29,6 +40,7 @@ export interface SourceCitation {
   contentHash: string;
   fetchedAt: number;
   category?: SourceCategory;
+  reliabilityScore?: number; // e.g. 98%
 }
 
 export interface ResearchReport {
@@ -72,6 +84,7 @@ export interface AgentTask {
   report?: ResearchReport;
   proof?: ProofMetadata;
   collectionId?: string;
+  notes?: string;
 }
 
 export interface UserSession {
@@ -148,3 +161,4 @@ export interface ChatMessage {
   report?: ResearchReport;
 }
 
+export type ExportFormat = 'copy_markdown' | 'markdown' | 'pdf' | 'json' | 'share';

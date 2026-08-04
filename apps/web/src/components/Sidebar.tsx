@@ -1,56 +1,81 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { ChevronLeft, ChevronRight, Menu, X, Plus, Clock, Folder, Shield, Settings, Wallet } from 'lucide-react';
 
-export function Sidebar() {
+interface SidebarProps {
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export function Sidebar({ isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
-    { label: '+ New Research', href: '/dashboard', icon: '✨', primary: true },
-    { label: 'Research History', href: '/history', icon: '📜' },
-    { label: 'Collections', href: '/collections', icon: '📁' },
-    { label: 'Proof Explorer', href: '/proof', icon: '🔮' },
-    { label: 'Settings', href: '/settings', icon: '⚙️' },
+    { label: 'New Research', href: '/dashboard', icon: Plus, primary: true },
+    { label: 'History', href: '/history', icon: Clock },
+    { label: 'Collections', href: '/collections', icon: Folder },
+    { label: 'Proof Explorer', href: '/proof', icon: Shield },
+    { label: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 text-slate-200 flex flex-col justify-between h-screen sticky top-0 z-30 select-none">
+  const sidebarContent = (
+    <div className="flex flex-col justify-between h-full p-4 font-sans select-none">
       <div>
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800/80">
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-4">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white font-black text-sm shadow-md shadow-purple-950/50 group-hover:scale-105 transition-transform">
               W
             </div>
-            <div>
-              <h1 className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-                WowWeb
-                <span className="text-[10px] font-mono font-normal uppercase px-1.5 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/50">v2</span>
-              </h1>
-              <p className="text-[11px] text-slate-400 font-medium">Verifiable AI Browser Agent</p>
-            </div>
+            {!isCollapsed && (
+              <div>
+                <h1 className="font-bold text-sm text-white tracking-tight flex items-center gap-1.5">
+                  WowWeb
+                  <span className="text-[9px] font-mono font-normal uppercase px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/60">v2</span>
+                </h1>
+                <p className="text-[10px] text-slate-400">Verifiable AI Workspace</p>
+              </div>
+            )}
           </Link>
+
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors hidden sm:block"
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
-        {/* Nav Items */}
-        <nav className="p-3 space-y-1 mt-2">
+        {/* Navigation */}
+        <nav className="space-y-1">
           {navItems.map((item) => {
+            const Icon = item.icon;
             const isActive = pathname === item.href;
+
             if (item.primary) {
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 mb-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-sm shadow-lg shadow-purple-900/30 transition-all active:scale-[0.98]"
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center justify-center gap-2 w-full py-2.5 px-3 mb-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-purple-950/60 transition-all ${
+                    isCollapsed ? 'px-2' : ''
+                  }`}
+                  title={item.label}
                 >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <Icon className="w-4 h-4" />
+                  {!isCollapsed && <span>{item.label}</span>}
                 </Link>
               );
             }
@@ -59,14 +84,16 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-purple-950/50 text-purple-300 border border-purple-800/40 shadow-sm'
+                    ? 'bg-purple-950/60 text-purple-300 border border-purple-800/50 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
+                title={item.label}
               >
-                <span className="text-base">{item.icon}</span>
-                <span>{item.label}</span>
+                <Icon className="w-4 h-4 shrink-0" />
+                {!isCollapsed && <span>{item.label}</span>}
               </Link>
             );
           })}
@@ -74,25 +101,29 @@ export function Sidebar() {
       </div>
 
       {/* Wallet Status Footer */}
-      <div className="p-4 border-t border-slate-800/80 bg-slate-950/80">
+      <div className="pt-4 border-t border-slate-800/80">
         {isConnected && address ? (
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">RitualNet</p>
-                <p className="text-xs font-mono text-slate-200 font-semibold truncate">
-                  {address.slice(0, 6)}...{address.slice(-4)}
-                </p>
-              </div>
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              {!isCollapsed && (
+                <div className="overflow-hidden">
+                  <p className="text-[9px] text-slate-400 uppercase font-mono">RitualNet</p>
+                  <p className="text-[11px] font-mono text-slate-200 font-semibold truncate">
+                    {address.slice(0, 6)}...{address.slice(-4)}
+                  </p>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => disconnect()}
-              className="text-xs text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-800 transition-colors"
-              title="Disconnect Wallet"
-            >
-              ✕
-            </button>
+            {!isCollapsed && (
+              <button
+                onClick={() => disconnect()}
+                className="text-xs text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                title="Disconnect Wallet"
+              >
+                ✕
+              </button>
+            )}
           </div>
         ) : (
           <button
@@ -100,17 +131,52 @@ export function Sidebar() {
               const injected = connectors.find((c) => c.id === 'injected' || c.id === 'metaMask');
               if (injected) connect({ connector: injected });
             }}
-            className="w-full py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2 px-3 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-2 transition-all"
+            title="Connect Wallet"
           >
-            <span>👛</span>
-            <span>Connect Wallet</span>
+            <Wallet className="w-3.5 h-3.5" />
+            {!isCollapsed && <span>Connect Wallet</span>}
           </button>
         )}
-
-        <div className="mt-3 text-center">
-          <p className="text-[10px] text-slate-500">Verified by RitualNet • Chain ID 1979</p>
-        </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Toggle Button */}
+      <button
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className="sm:hidden fixed top-3 left-3 z-50 p-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 shadow-lg"
+      >
+        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </button>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="sm:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+        />
+      )}
+
+      {/* Mobile Drawer Container */}
+      <div
+        className={`sm:hidden fixed inset-y-0 left-0 z-40 w-64 bg-slate-950 border-r border-slate-800 transform transition-transform duration-200 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </div>
+
+      {/* Desktop Sticky Sidebar */}
+      <aside
+        className={`hidden sm:flex flex-col bg-slate-950 border-r border-slate-800 text-slate-200 h-screen sticky top-0 z-30 transition-all duration-200 ${
+          isCollapsed ? 'w-16' : 'w-64'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
