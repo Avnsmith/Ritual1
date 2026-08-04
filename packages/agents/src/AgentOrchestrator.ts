@@ -74,12 +74,12 @@ export class AgentOrchestrator {
     };
 
     try {
-      // 1. Planning Stage
-      emitStep('planning', 'Planning Research Strategy', `Planner Agent analyzing research intent for "${prompt}"`);
+      // Stage 1: Planning
+      emitStep('planning', 'Planning Research Strategy', `Planner Agent formulating search sub-queries for "${prompt}"`);
       const plan = await planner.analyze(prompt);
       emitStep('planning', 'Strategy Formulated', plan.reasoning, 'completed', { plan });
 
-      // 2. Searching Stage
+      // Stage 2: Searching
       task.status = 'searching';
       emitStep('searching', `Searching Web Index (${searchProvider.name.toUpperCase()})`, `Querying live web for "${prompt}"`);
       let searchResults = await searchProvider.search(prompt, {
@@ -87,7 +87,7 @@ export class AgentOrchestrator {
         apiKey: execOptions?.userSettings?.search?.apiKey,
       });
 
-      // Backup fallback search query if initial search returned 0 URLs
+      // Fallback search query if initial search returned 0 URLs
       if (searchResults.length === 0 && searchProvider.name !== 'duckduckgo') {
         const fallbackProvider = SearchProviderFactory.create('duckduckgo');
         searchResults = await fallbackProvider.search(prompt, { maxResults: 8 });
@@ -113,32 +113,50 @@ export class AgentOrchestrator {
         return task;
       }
 
-      emitStep('searching', 'Web Index Search Complete', `Retrieved ${searchResults.length} verified candidate URLs`, 'completed', { searchResults });
+      emitStep('searching', 'Web Index Search Complete', `Discovered ${searchResults.length} target web URLs`, 'completed', { searchResults });
 
-      // 3. Reading Stage
+      // Stage 3: Reading & Live Browser Extraction
       task.status = 'reading';
-      emitStep('reading', 'Extracting Page Content & Repos', `Browser Agent crawling ${searchResults.length} web pages & GitHub repos`);
+      emitStep('reading', 'Extracting Content Across Discovered URLs', `Browser Agent opening and parsing ${searchResults.length} pages`);
       const fetchedSources: SourceCitation[] = [];
 
       for (const res of searchResults) {
+        let domain = 'web';
+        try {
+          domain = new URL(res.url).hostname.replace('www.', '');
+        } catch {
+          // Fallback
+        }
+
+        emitStep('reading', `Opening ${domain}...`, `Fetching content from ${res.title}`);
         const pageData = await this.browser.extract(res.url);
-        fetchedSources.push(pageData.snippet.startsWith('Failed') ? res : pageData);
+        const validData = pageData.snippet.startsWith('Failed') ? res : pageData;
+        fetchedSources.push(validData);
+
+        emitStep(
+          'reading',
+          `Extracted text from ${domain}`,
+          `Extracted ${validData.snippet.length} chars • Hash: ${validData.contentHash.slice(0, 10)}...`,
+          'completed',
+          { source: validData, sources: fetchedSources }
+        );
       }
-      emitStep('reading', 'Content Extraction Complete', `Successfully extracted raw text from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length, sources: fetchedSources });
 
-      // 4. Reasoning Stage
+      emitStep('reading', 'All Content Extraction Complete', `Successfully extracted raw text from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length, sources: fetchedSources });
+
+      // Stage 4: Reasoning
       task.status = 'summarizing';
-      emitStep('reasoning', 'LLM Analytical Synthesis', `Reasoner Agent analyzing extracted text across ${fetchedSources.length} sources`);
+      emitStep('reasoning', 'LLM Multi-Source Analytical Synthesis', `Reasoner Agent cross-comparing evidence across ${fetchedSources.length} sources`);
       const researchData = await research.analyzeSources(prompt, fetchedSources);
-      emitStep('reasoning', 'Synthesis Complete', `Extracted key findings across verified web chunks`, 'completed', { researchData });
+      emitStep('reasoning', 'Synthesis Complete', `Analyzed key findings from verified web chunks`, 'completed', { researchData });
 
-      // 5. Writing Stage
-      emitStep('writing', 'Formatting Structured Report', 'Writer Agent building executive markdown with citations [1], [2]');
+      // Stage 5: Writing
+      emitStep('writing', 'Formatting Structured Report', 'Writer Agent generating markdown report with citations [1], [2]');
       const finalReport = await summary.generateReport(prompt, researchData, fetchedSources);
       task.report = finalReport;
-      emitStep('writing', 'Report Generated', 'Structured Markdown report complete', 'completed');
+      emitStep('writing', 'Report Generated', 'Structured report and evidence matrix generated', 'completed');
 
-      // 6. Publishing Stage (RitualNet On-Chain Registration)
+      // Stage 6: Publishing
       task.status = 'verifying';
       emitStep('publishing', 'Computing Cryptographic Commitments', 'Verifier Agent computing keccak256 hashes of prompt, output, and visited sources');
       const proofMetadata = await this.verification.createProof(
