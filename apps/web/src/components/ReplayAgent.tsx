@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ExecutionStep, PipelineStage } from '@wowweb/shared';
-import { Play, Pause, RotateCcw, Compass, Search, Globe, FileText, Cpu, Terminal, ShieldCheck, Clock, CheckCircle2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Compass, Search, Globe, Cpu, Terminal, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ReplayAgentProps {
   steps: ExecutionStep[];
@@ -40,14 +40,12 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
 
   const getStageIcon = (stage: PipelineStage) => {
     switch (stage) {
-      case 'planner': return <Compass className="w-5 h-5 text-purple-400" />;
-      case 'search': return <Search className="w-5 h-5 text-cyan-400" />;
-      case 'browser': return <Globe className="w-5 h-5 text-blue-400" />;
-      case 'retriever': return <FileText className="w-5 h-5 text-amber-400" />;
-      case 'reasoner': return <Cpu className="w-5 h-5 text-indigo-400" />;
-      case 'writer': return <Terminal className="w-5 h-5 text-emerald-400" />;
-      case 'verifier':
-      case 'publisher': return <ShieldCheck className="w-5 h-5 text-purple-300" />;
+      case 'planning': return <Compass className="w-5 h-5 text-purple-400" />;
+      case 'searching': return <Search className="w-5 h-5 text-cyan-400" />;
+      case 'reading': return <Globe className="w-5 h-5 text-blue-400" />;
+      case 'reasoning': return <Cpu className="w-5 h-5 text-indigo-400" />;
+      case 'writing': return <Terminal className="w-5 h-5 text-emerald-400" />;
+      case 'publishing': return <ShieldCheck className="w-5 h-5 text-purple-300" />;
       default: return <Compass className="w-5 h-5 text-slate-400" />;
     }
   };
@@ -61,7 +59,7 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
             <span>🎬</span> Replay Agent Execution Journey
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Step-by-step reconstruction of the 8 autonomous agent pipeline stages.
+            Step-by-step reconstruction of the 6 autonomous agent pipeline stages.
           </p>
         </div>
 
@@ -107,11 +105,12 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
         />
       </div>
 
-      {/* 8 Agent Stage Indicator Bar */}
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 text-center text-[10px] font-mono">
+      {/* 6 Stage Indicator Bar */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-[10px] font-mono">
         {steps.map((step, idx) => {
           const isActive = idx === activeStepIndex;
           const isPassed = idx < activeStepIndex;
+          const isFailed = step.status === 'failed';
           return (
             <div
               key={step.id || idx}
@@ -122,13 +121,15 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
               className={`p-2 rounded-xl border cursor-pointer transition-all ${
                 isActive
                   ? 'bg-purple-950 border-purple-500 text-purple-200 font-bold shadow-md'
+                  : isFailed
+                  ? 'bg-rose-950 border-rose-500 text-rose-400'
                   : isPassed
                   ? 'bg-slate-950 border-emerald-500/40 text-emerald-400'
                   : 'bg-slate-950/60 border-slate-800 text-slate-500'
               }`}
             >
               <div className="uppercase truncate">{step.stage}</div>
-              <div className="mt-1 font-sans">{isPassed ? '✓' : idx + 1}</div>
+              <div className="mt-1 font-sans">{isFailed ? '✕' : isPassed ? '✓' : idx + 1}</div>
             </div>
           );
         })}
@@ -149,8 +150,13 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
             </div>
           </div>
 
-          <span className="px-2.5 py-1 rounded-full bg-emerald-950 border border-emerald-500/60 text-emerald-300 font-mono text-[11px] flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Real Metric
+          <span className={`px-2.5 py-1 rounded-full text-[11px] font-mono flex items-center gap-1 border ${
+            currentStep.status === 'failed'
+              ? 'bg-rose-950 border-rose-500 text-rose-400'
+              : 'bg-emerald-950 border-emerald-500/60 text-emerald-300'
+          }`}>
+            {currentStep.status === 'failed' ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span className="uppercase">{currentStep.status}</span>
           </span>
         </div>
 
@@ -164,7 +170,7 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
 
           <div>
             <span className="text-slate-500 block text-[9px] uppercase">SOURCES COLLECTED</span>
-            <span className="text-purple-300">{currentStep.sourcesCount || 8} pages</span>
+            <span className="text-purple-300">{currentStep.sourcesCount || 0} pages</span>
           </div>
 
           <div>

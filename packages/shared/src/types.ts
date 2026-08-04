@@ -1,12 +1,10 @@
 export type PipelineStage = 
-  | 'planner' 
-  | 'search' 
-  | 'browser' 
-  | 'retriever' 
-  | 'reasoner' 
-  | 'writer' 
-  | 'verifier' 
-  | 'publisher';
+  | 'planning' 
+  | 'searching' 
+  | 'reading' 
+  | 'reasoning' 
+  | 'writing' 
+  | 'publishing';
 
 export type ExecutionStatus = 'pending' | 'searching' | 'reading' | 'summarizing' | 'verifying' | 'completed' | 'failed';
 
@@ -40,17 +38,16 @@ export interface SourceCitation {
   contentHash: string;
   fetchedAt: number;
   category?: SourceCategory;
-  reliabilityScore?: number; // e.g. 98%
 }
 
 export interface ResearchReport {
   title: string;
   summary: string;
+  evidenceQuality: 'High' | 'Medium' | 'Low';
   keyFindings: string[];
   pros: string[];
   cons: string[];
   comparisonTable: Array<{ feature: string; [key: string]: string }>;
-  confidenceScore: number;
   sources: SourceCitation[];
   rawMarkdown: string;
   mermaidDiagram?: string;

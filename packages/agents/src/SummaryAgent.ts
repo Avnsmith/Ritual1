@@ -15,7 +15,11 @@ export class SummaryAgent {
     research: SynthesizedResearch,
     sources: SourceCitation[]
   ): Promise<ResearchReport> {
-    const validSources = sources.filter(s => !s.snippet.startsWith('Failed'));
+    const validSources = sources.filter(s => s.snippet && !s.snippet.startsWith('Failed'));
+    if (validSources.length === 0) {
+      throw new Error(`Cannot generate report: 0 web sources found for query "${prompt}".`);
+    }
+
     const sourceContext = validSources
       .map((s, i) => `[${i + 1}] Title: ${s.title}\nURL: ${s.url}\nHash: ${s.contentHash}\nSnippet: ${s.snippet}`)
       .join('\n\n');
@@ -27,11 +31,11 @@ export class SummaryAgent {
         messages: [
           {
             role: 'system',
-            content: `You are WowWeb Autonomous Summary Agent. Write an executive Markdown research report answering "${prompt}". MANDATORY RULE: You MUST cite sources using inline citations like [1], [2] referencing the provided sources list. Include sections: # Executive Summary, ## Key Findings, ## Ecosystem Comparison, ## Visited Sources, and ## RitualNet On-Chain Proof.`,
+            content: `You are WowWeb Summary Agent. Write a structured research report answering "${prompt}". MANDATORY RULE: Use inline citations [1], [2] referencing sources. Use sections: # Overview, ## Evidence & Findings, ## Comparison & Analysis, ## Conclusion & Tradeoffs, ## References, ## Ritual Verification. Do NOT include fake confidence scores.`,
           },
           {
             role: 'user',
-            content: `Query: "${prompt}"\n\nVerified Sources:\n${sourceContext}\n\nSynthesized Research:\nKey Findings: ${research.keyFindings.join('; ')}\nPros: ${research.pros.join('; ')}\nCons: ${research.cons.join('; ')}`,
+            content: `Query: "${prompt}"\n\nVerified Web Sources:\n${sourceContext}\n\nSynthesized Key Findings: ${research.keyFindings.join('; ')}`,
           },
         ],
         temperature: 0.3,
@@ -41,7 +45,7 @@ export class SummaryAgent {
         rawMarkdown = responseText;
       }
     } catch {
-      // Dynamic Markdown Construction
+      // Dynamic Markdown Construction from actual sources
     }
 
     if (!rawMarkdown) {
@@ -50,70 +54,55 @@ export class SummaryAgent {
         .map((f, idx) => `- ${f} [${(idx % Math.max(1, validSources.length)) + 1}]`)
         .join('\n');
 
-      const prosList = research.pros
-        .map((p, idx) => `- ✅ ${p} [${(idx % Math.max(1, validSources.length)) + 1}]`)
-        .join('\n');
-
-      const consList = research.cons
-        .map((c, idx) => `- ⚠️ ${c} [${(idx % Math.max(1, validSources.length)) + 1}]`)
-        .join('\n');
-
       const sourcesTable = validSources
         .map((s, idx) => `| [${idx + 1}] | [${s.title}](${s.url}) | \`${s.contentHash.slice(0, 12)}...\` | \`${new Date(s.fetchedAt).toLocaleTimeString()}\` |`)
         .join('\n');
 
-      rawMarkdown = `# WowWeb Autonomous Research Report: ${prompt}
+      rawMarkdown = `# ${prompt}
 
-**Generated Date**: ${dateStr}  
-**Confidence Score**: \`${research.confidenceScore}%\`  
-**Execution Environment**: RitualNet Testnet (\`Chain ID: 1979\`)  
-**Status**: 🟢 Verifiable On-Chain Proof Recorded
+**Date**: ${dateStr}  
+**Evidence Quality**: \`${research.evidenceQuality}\`  
+**Sources Verified**: \`${validSources.length} web domains\`  
 
 ---
 
-## 1. Executive Summary
+## 1. Overview
 
-WowWeb completed an autonomous web research trajectory for:
+WowWeb executed autonomous web research for:
 > **"${prompt}"**
 
-By inspecting verified web sources [1], WowWeb synthesized key architectural insights and computed keccak256 hash commitments (\`promptHash\`, \`outputHash\`, \`visitedUrlsHash\`) for immutable on-chain verification on RitualNet [2].
+Extracted text from ${validSources.length} verified web sources [1]. All outputs are hash-committed on RitualNet [2].
 
 ---
 
-## 2. Key Findings & Insights
+## 2. Evidence & Key Findings
 
 ${findingsList}
 
-### Architectural Advantages (Pros)
-${prosList}
-
-### Considerations & Tradeoffs (Cons)
-${consList}
-
 ---
 
-## 3. Visited Web Sources
+## 3. Verified Web Sources
 
 | # | Source Title & Link | Content Hash (keccak256) | Timestamp |
 | :--- | :--- | :--- | :--- |
-${sourcesTable || '| - | No sources fetched | - | - |'}
+${sourcesTable}
 
 ---
 
-## 4. RitualNet Proof Commitment
+## 4. Ritual Verification
 
-All research outputs and visited web source hashes are committed on-chain to **\`WowWebProofRegistry\`** at address \`0x23cc1998562c39474623639c18c31d49abd0c310\` on RitualNet (\`Chain ID: 1979\`).
+On-chain proof commitment anchored on **\`WowWebProofRegistry\`** on RitualNet (\`Chain ID: 1979\`).
 `;
     }
 
     return {
-      title: `Research Report: ${prompt}`,
+      title: prompt,
       summary: rawMarkdown,
+      evidenceQuality: research.evidenceQuality,
       keyFindings: research.keyFindings,
       pros: research.pros,
       cons: research.cons,
       comparisonTable: research.comparisonTable,
-      confidenceScore: research.confidenceScore,
       sources: validSources,
       rawMarkdown,
     };
