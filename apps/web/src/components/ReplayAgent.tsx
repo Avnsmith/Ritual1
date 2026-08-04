@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ExecutionStep, PipelineStage } from '@wowweb/shared';
-import { Play, Pause, RotateCcw, Compass, Search, Globe, Cpu, Terminal, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, Compass, Search, Globe, FileText, Database, Cpu, Terminal, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ReplayAgentProps {
   steps: ExecutionStep[];
@@ -40,26 +40,29 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
 
   const getStageIcon = (stage: PipelineStage) => {
     switch (stage) {
-      case 'planning': return <Compass className="w-5 h-5 text-purple-400" />;
-      case 'searching': return <Search className="w-5 h-5 text-cyan-400" />;
-      case 'reading': return <Globe className="w-5 h-5 text-blue-400" />;
-      case 'reasoning': return <Cpu className="w-5 h-5 text-indigo-400" />;
-      case 'writing': return <Terminal className="w-5 h-5 text-emerald-400" />;
-      case 'publishing': return <ShieldCheck className="w-5 h-5 text-purple-300" />;
+      case 'planner': return <Compass className="w-5 h-5 text-purple-400" />;
+      case 'search': return <Search className="w-5 h-5 text-cyan-400" />;
+      case 'browser': return <Globe className="w-5 h-5 text-blue-400" />;
+      case 'extract': return <FileText className="w-5 h-5 text-emerald-400" />;
+      case 'retriever': return <Database className="w-5 h-5 text-amber-400" />;
+      case 'reasoner': return <Cpu className="w-5 h-5 text-indigo-400" />;
+      case 'writer': return <Terminal className="w-5 h-5 text-emerald-300" />;
+      case 'verifier': return <ShieldCheck className="w-5 h-5 text-purple-300" />;
+      case 'publisher': return <ShieldCheck className="w-5 h-5 text-purple-400" />;
       default: return <Compass className="w-5 h-5 text-slate-400" />;
     }
   };
 
   return (
     <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-6 max-w-[950px] mx-auto font-sans text-slate-200">
-      {/* Header & Controls */}
+      {/* Header Controls */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-4">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <span>🎬</span> Replay Agent Execution Journey
+            <span>🎬</span> Replay Browser Agent Journey
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Step-by-step reconstruction of the 6 autonomous agent pipeline stages.
+            Step-by-step reconstruction of the 9 autonomous browser pipeline stages.
           </p>
         </div>
 
@@ -85,10 +88,10 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
         </div>
       </div>
 
-      {/* Scrubber Range Input */}
+      {/* Scrubber */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-          <span>Stage {activeStepIndex + 1} of {steps.length}: <strong className="text-purple-300 uppercase">{currentStep.stage}</strong></span>
+          <span>Action {activeStepIndex + 1} of {steps.length}: <strong className="text-purple-300 uppercase">{currentStep.stage}</strong></span>
           <span>{currentStep.durationMs ? `${(currentStep.durationMs / 1000).toFixed(1)}s elapsed` : '1.2s'}</span>
         </div>
 
@@ -105,8 +108,8 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
         />
       </div>
 
-      {/* 6 Stage Indicator Bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-[10px] font-mono">
+      {/* 9 Stage Indicator Bar */}
+      <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 text-center text-[9px] font-mono">
         {steps.map((step, idx) => {
           const isActive = idx === activeStepIndex;
           const isPassed = idx < activeStepIndex;
@@ -161,23 +164,6 @@ export function ReplayAgent({ steps }: ReplayAgentProps) {
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed font-sans">{currentStep.description}</p>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-[11px] font-mono text-slate-400">
-          <div>
-            <span className="text-slate-500 block text-[9px] uppercase">STATUS</span>
-            <span className="text-emerald-400 font-semibold uppercase">{currentStep.status}</span>
-          </div>
-
-          <div>
-            <span className="text-slate-500 block text-[9px] uppercase">SOURCES COLLECTED</span>
-            <span className="text-purple-300">{currentStep.sourcesCount || 0} pages</span>
-          </div>
-
-          <div>
-            <span className="text-slate-500 block text-[9px] uppercase">TIMESTAMP</span>
-            <span className="text-slate-300">{new Date(currentStep.timestamp).toLocaleTimeString()}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

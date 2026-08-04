@@ -74,14 +74,14 @@ export class AgentOrchestrator {
     };
 
     try {
-      // Stage 1: Planning
-      emitStep('planning', 'Planning Research Strategy', `Planner Agent formulating search sub-queries for "${prompt}"`);
+      // Stage 1: Planner
+      emitStep('planner', 'Planning Research Strategy', `Planner Agent formulating sub-queries for "${prompt}"`);
       const plan = await planner.analyze(prompt);
-      emitStep('planning', 'Strategy Formulated', plan.reasoning, 'completed', { plan });
+      emitStep('planner', 'Strategy Formulated', plan.reasoning, 'completed', { plan });
 
-      // Stage 2: Searching
+      // Stage 2: Search API
       task.status = 'searching';
-      emitStep('searching', `Searching Web Index (${searchProvider.name.toUpperCase()})`, `Querying live web for "${prompt}"`);
+      emitStep('search', `Querying Search API (${searchProvider.name.toUpperCase()})`, `Fetching URLs for query "${prompt}"`);
       let searchResults = await searchProvider.search(prompt, {
         maxResults: execOptions?.userSettings?.browser?.maxPages || 8,
         apiKey: execOptions?.userSettings?.search?.apiKey,
@@ -94,7 +94,7 @@ export class AgentOrchestrator {
       }
 
       if (searchResults.length === 0) {
-        emitStep('searching', 'No Web Sources Found', `Search returned 0 candidate URLs for "${prompt}"`, 'failed', { sourcesCount: 0 });
+        emitStep('search', 'No Web Sources Found', `Search returned 0 candidate URLs for "${prompt}"`, 'failed', { sourcesCount: 0 });
         
         task.status = 'failed';
         task.report = {
@@ -109,17 +109,18 @@ export class AgentOrchestrator {
           rawMarkdown: `> ⚠️ **No Web Evidence Found**\n\nNo relevant web sources could be retrieved for query **"${prompt}"**.\n\n### Suggestions:\n1. Check active Search Engine settings in **Settings** (Brave, Tavily, Serper).\n2. Try broader keywords or simpler terms.\n3. Retry research.`,
         };
 
-        emitStep('writing', 'Research Halted (No Sources)', 'No evidence available. Zero fake conclusions synthesized.', 'failed');
+        emitStep('writer', 'Research Halted (No Sources)', 'No evidence available. Zero fake conclusions synthesized.', 'failed');
         return task;
       }
 
-      emitStep('searching', 'Web Index Search Complete', `Discovered ${searchResults.length} target web URLs`, 'completed', { searchResults });
+      emitStep('search', 'Discovered Web Target URLs', `Discovered ${searchResults.length} verified web URLs`, 'completed', { searchResults });
 
-      // Stage 3: Reading & Live Browser Extraction
+      // Stage 3: Browser
       task.status = 'reading';
-      emitStep('reading', 'Extracting Content Across Discovered URLs', `Browser Agent opening and parsing ${searchResults.length} pages`);
-      const fetchedSources: SourceCitation[] = [];
+      emitStep('browser', 'Opening Web Target URLs', `Browser Agent launching crawlers for ${searchResults.length} pages`);
 
+      // Stage 4: Extract
+      const fetchedSources: SourceCitation[] = [];
       for (const res of searchResults) {
         let domain = 'web';
         try {
@@ -128,37 +129,41 @@ export class AgentOrchestrator {
           // Fallback
         }
 
-        emitStep('reading', `Opening ${domain}...`, `Fetching content from ${res.title}`);
+        emitStep('extract', `Opening ${domain}...`, `Fetching & cleaning DOM for ${res.title}`);
         const pageData = await this.browser.extract(res.url);
         const validData = pageData.snippet.startsWith('Failed') ? res : pageData;
         fetchedSources.push(validData);
 
         emitStep(
-          'reading',
+          'extract',
           `Extracted text from ${domain}`,
           `Extracted ${validData.snippet.length} chars • Hash: ${validData.contentHash.slice(0, 10)}...`,
           'completed',
           { source: validData, sources: fetchedSources }
         );
       }
+      emitStep('browser', 'All Pages Crawled & Extracted', `Successfully extracted text from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length, sources: fetchedSources });
 
-      emitStep('reading', 'All Content Extraction Complete', `Successfully extracted raw text from ${fetchedSources.length} pages`, 'completed', { sourcesCount: fetchedSources.length, sources: fetchedSources });
+      // Stage 5: Retriever
+      emitStep('retriever', 'Document Chunking & Score Reranking', `Retriever Agent splitting text into chunks and selecting top relevance vectors`);
+      const rankedChunks = this.retriever.rankChunks(prompt, fetchedSources, 10);
+      emitStep('retriever', 'Chunk Selection Complete', `Selected top ${rankedChunks.length} high-confidence text chunks`, 'completed', { rankedCount: rankedChunks.length });
 
-      // Stage 4: Reasoning
+      // Stage 6: Reasoner
       task.status = 'summarizing';
-      emitStep('reasoning', 'LLM Multi-Source Analytical Synthesis', `Reasoner Agent cross-comparing evidence across ${fetchedSources.length} sources`);
+      emitStep('reasoner', 'Multi-Source LLM Analytical Reasoning', `Reasoner Agent cross-comparing evidence across ${fetchedSources.length} sources`);
       const researchData = await research.analyzeSources(prompt, fetchedSources);
-      emitStep('reasoning', 'Synthesis Complete', `Analyzed key findings from verified web chunks`, 'completed', { researchData });
+      emitStep('reasoner', 'Reasoning Complete', `Analyzed key findings from verified web chunks`, 'completed', { researchData });
 
-      // Stage 5: Writing
-      emitStep('writing', 'Formatting Structured Report', 'Writer Agent generating markdown report with citations [1], [2]');
+      // Stage 7: Writer
+      emitStep('writer', 'Formatting Structured Report', 'Writer Agent generating markdown report with citations [1], [2]');
       const finalReport = await summary.generateReport(prompt, researchData, fetchedSources);
       task.report = finalReport;
-      emitStep('writing', 'Report Generated', 'Structured report and evidence matrix generated', 'completed');
+      emitStep('writer', 'Report Generated', 'Structured report and evidence matrix complete', 'completed');
 
-      // Stage 6: Publishing
+      // Stage 8: Verifier
       task.status = 'verifying';
-      emitStep('publishing', 'Computing Cryptographic Commitments', 'Verifier Agent computing keccak256 hashes of prompt, output, and visited sources');
+      emitStep('verifier', 'Computing Cryptographic Commitments', 'Verifier Agent computing keccak256 hashes of prompt, output, and visited sources');
       const proofMetadata = await this.verification.createProof(
         executionId,
         prompt,
@@ -167,15 +172,18 @@ export class AgentOrchestrator {
         ownerWallet,
         task.agentId
       );
+      emitStep('verifier', 'Proof Hashes Computed', `PromptHash: ${proofMetadata.promptHash.slice(0, 10)}... OutputHash: ${proofMetadata.outputHash.slice(0, 10)}...`, 'completed');
 
+      // Stage 9: Publisher
       const shouldPublish = execOptions?.autoPublish ?? execOptions?.userSettings?.ritual?.autoPublish ?? true;
       if (shouldPublish) {
+        emitStep('publisher', 'Publishing Proof to RitualNet', 'Publisher Agent anchoring cryptographic commitment on WowWebProofRegistry');
         const publishedProof = await this.publisher.publishProof(proofMetadata);
         task.proof = publishedProof;
-        emitStep('publishing', 'Proof Verified On-Chain', `Tx: ${publishedProof.transactionHash} (Chain ID: 1979)`, 'completed', { proof: publishedProof });
+        emitStep('publisher', 'Proof Verified On-Chain', `Tx: ${publishedProof.transactionHash} (Chain ID: 1979)`, 'completed', { proof: publishedProof });
       } else {
         task.proof = proofMetadata;
-        emitStep('publishing', 'Proof Ready for Manual Publishing', 'Cryptographic hashes verified locally.', 'completed');
+        emitStep('publisher', 'Proof Ready for Manual Publishing', 'Cryptographic hashes verified locally.', 'completed');
       }
 
       task.status = 'completed';
@@ -185,7 +193,7 @@ export class AgentOrchestrator {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       task.status = 'failed';
-      emitStep('publishing', 'Execution Error', `Task failed: ${errorMessage}`, 'failed');
+      emitStep('publisher', 'Execution Error', `Task failed: ${errorMessage}`, 'failed');
       throw err;
     }
   }

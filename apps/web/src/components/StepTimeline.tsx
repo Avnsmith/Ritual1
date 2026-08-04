@@ -10,18 +10,20 @@ interface StepTimelineProps {
 export function StepTimeline({ steps }: StepTimelineProps) {
   if (!steps || steps.length === 0) return null;
 
+  const stages = ['planner', 'search', 'browser', 'extract', 'retriever', 'reasoner', 'writer', 'verifier', 'publisher'];
+
   return (
     <div className="my-4 p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 shadow-inner font-sans text-xs">
       <div className="flex items-center justify-between mb-3 border-b border-slate-800/60 pb-2">
         <h4 className="text-xs font-mono font-semibold uppercase text-purple-400 tracking-wider flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
-          Autonomous Pipeline (6 Stages)
+          Autonomous AI Browser Pipeline (9 Stages)
         </h4>
-        <span className="text-[11px] font-mono text-slate-500">{steps.length} Stages Active</span>
+        <span className="text-[11px] font-mono text-slate-500">{steps.length} Actions Recorded</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center font-mono text-[11px]">
-        {['planning', 'searching', 'reading', 'reasoning', 'writing', 'publishing'].map((stageKey, idx) => {
+      <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 text-center font-mono text-[10px]">
+        {stages.map((stageKey, idx) => {
           const matchedStep = steps.find(s => s.stage === stageKey);
           const isDone = matchedStep?.status === 'completed';
           const isFailed = matchedStep?.status === 'failed';
@@ -40,7 +42,7 @@ export function StepTimeline({ steps }: StepTimelineProps) {
                   : 'bg-slate-950 border-slate-900 text-slate-600'
               }`}
             >
-              <div className="uppercase text-[10px] truncate">{stageKey}</div>
+              <div className="uppercase text-[9px] truncate">{stageKey}</div>
               <div className="mt-1 font-bold">
                 {isDone ? '✓' : isFailed ? '✕' : isCurrent ? '...' : idx + 1}
               </div>

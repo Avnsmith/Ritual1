@@ -1,10 +1,13 @@
 export type PipelineStage = 
-  | 'planning' 
-  | 'searching' 
-  | 'reading' 
-  | 'reasoning' 
-  | 'writing' 
-  | 'publishing';
+  | 'planner'
+  | 'search'
+  | 'browser'
+  | 'extract'
+  | 'retriever'
+  | 'reasoner'
+  | 'writer'
+  | 'verifier'
+  | 'publisher';
 
 export type ExecutionStatus = 'pending' | 'searching' | 'reading' | 'summarizing' | 'verifying' | 'completed' | 'failed';
 
