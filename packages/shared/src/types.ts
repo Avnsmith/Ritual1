@@ -1,8 +1,18 @@
+export type PipelineStage = 
+  | 'planner' 
+  | 'search' 
+  | 'browser' 
+  | 'retriever' 
+  | 'reasoner' 
+  | 'writer' 
+  | 'verifier' 
+  | 'publisher';
+
 export type ExecutionStatus = 'pending' | 'searching' | 'reading' | 'summarizing' | 'verifying' | 'completed' | 'failed';
 
 export interface ExecutionStep {
   id: string;
-  stage: 'planner' | 'browser' | 'research' | 'summary' | 'verification' | 'proof';
+  stage: PipelineStage;
   title: string;
   description: string;
   timestamp: number;
@@ -10,12 +20,15 @@ export interface ExecutionStep {
   details?: Record<string, unknown>;
 }
 
+export type SourceCategory = 'github' | 'medium' | 'docs' | 'whitepaper' | 'twitter' | 'arxiv' | 'youtube' | 'blog' | 'general';
+
 export interface SourceCitation {
   title: string;
   url: string;
   snippet: string;
   contentHash: string;
   fetchedAt: number;
+  category?: SourceCategory;
 }
 
 export interface ResearchReport {
@@ -28,6 +41,7 @@ export interface ResearchReport {
   confidenceScore: number;
   sources: SourceCitation[];
   rawMarkdown: string;
+  mermaidDiagram?: string;
 }
 
 export interface ProofMetadata {
@@ -57,6 +71,7 @@ export interface AgentTask {
   steps: ExecutionStep[];
   report?: ResearchReport;
   proof?: ProofMetadata;
+  collectionId?: string;
 }
 
 export interface UserSession {
@@ -75,3 +90,61 @@ export interface AgentStats {
   avgRuntimeSeconds: number;
   recentProofs: ProofMetadata[];
 }
+
+export type LLMProviderType = 'openai' | 'gemini' | 'anthropic' | 'groq' | 'openrouter' | 'ollama';
+export type SearchEngineType = 'brave' | 'serper' | 'tavily' | 'exa' | 'duckduckgo';
+
+export interface AISettings {
+  provider: LLMProviderType;
+  apiKey: string;
+  model?: string;
+  temperature: number;
+  topP: number;
+  maxTokens: number;
+}
+
+export interface SearchSettings {
+  provider: SearchEngineType;
+  apiKey: string;
+}
+
+export interface BrowserSettings {
+  depth: number;
+  parallelCrawlers: number;
+  maxPages: number;
+  timeoutMs: number;
+}
+
+export interface RitualSettings {
+  autoPublish: boolean;
+  publishMode: 'auto' | 'manual';
+  verificationLevel: 'standard' | 'strict';
+}
+
+export interface UserSettings {
+  ai: AISettings;
+  search: SearchSettings;
+  browser: BrowserSettings;
+  ritual: RitualSettings;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  createdAt: number;
+  taskIds: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  steps?: ExecutionStep[];
+  sources?: SourceCitation[];
+  proof?: ProofMetadata;
+  report?: ResearchReport;
+}
+

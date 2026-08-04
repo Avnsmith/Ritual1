@@ -1,8 +1,17 @@
-import { AgentTask, AgentStats, UserSession, ProofMetadata } from '@wowweb/shared';
+import { AgentTask, AgentStats, UserSession, ProofMetadata, Collection } from '@wowweb/shared';
 
 export class StorageEngine {
   private tasks = new Map<string, AgentTask>();
   private sessions = new Map<string, UserSession>();
+  private collections = new Map<string, Collection>();
+
+  constructor() {
+    // Seed default collections
+    this.saveCollection({ id: 'col-ai', name: 'AI & Agents', description: 'AI research, architectures & agents', icon: '🤖', createdAt: Date.now(), taskIds: [] });
+    this.saveCollection({ id: 'col-blockchain', name: 'Blockchain & L1/L2', description: 'DeFi, consensus, scaling & infrastructure', icon: '⛓️', createdAt: Date.now(), taskIds: [] });
+    this.saveCollection({ id: 'col-zk', name: 'ZK & Cryptography', description: 'Zero-knowledge proofs, FHE & verification', icon: '🔐', createdAt: Date.now(), taskIds: [] });
+    this.saveCollection({ id: 'col-ritual', name: 'Ritual Ecosystem', description: 'RitualNet, Infernet & precompiles', icon: '🔮', createdAt: Date.now(), taskIds: [] });
+  }
 
   saveTask(task: AgentTask): void {
     this.tasks.set(task.id, task);
@@ -67,6 +76,30 @@ export class StorageEngine {
       avgRuntimeSeconds,
       recentProofs,
     };
+  }
+
+  saveCollection(col: Collection): Collection {
+    this.collections.set(col.id, col);
+    return col;
+  }
+
+  getCollections(): Collection[] {
+    return Array.from(this.collections.values()).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  addTaskToCollection(collectionId: string, taskId: string): boolean {
+    const col = this.collections.get(collectionId);
+    if (!col) return false;
+    if (!col.taskIds.includes(taskId)) {
+      col.taskIds.push(taskId);
+      this.collections.set(collectionId, col);
+    }
+    const task = this.tasks.get(taskId);
+    if (task) {
+      task.collectionId = collectionId;
+      this.tasks.set(taskId, task);
+    }
+    return true;
   }
 }
 

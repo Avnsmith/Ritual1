@@ -1,8 +1,8 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import sanitizeHtml from 'sanitize-html';
-import { SourceCitation, hashString } from '@wowweb/shared';
-import { RitualKnowledgeLayer } from './RitualKnowledgeLayer.js';
+import { SourceCitation, SourceCategory, hashString } from '@wowweb/shared';
+import { SearchProviderFactory, categorizeUrl } from './providers/SearchProvider.js';
 
 export class BrowserAgent {
   private isAllowedUrl(url: string): boolean {
@@ -18,9 +18,19 @@ export class BrowserAgent {
     }
   }
 
-  async fetchPage(url: string): Promise<SourceCitation> {
+  async crawl(url: string): Promise<SourceCitation> {
+    return this.extract(url);
+  }
+
+  async extract(url: string): Promise<SourceCitation> {
     if (!this.isAllowedUrl(url)) {
       throw new Error(`Security Violation: Access denied to invalid or restricted URL ${url}`);
+    }
+
+    const category = categorizeUrl(url);
+
+    if (category === 'github') {
+      return this.extractGithub(url);
     }
 
     try {
@@ -31,24 +41,31 @@ export class BrowserAgent {
         timeout: 10000,
       });
 
-      const $ = cheerio.load(response.data);
-      $('script, style, iframe, nav, footer, ads, svg').remove();
+      const contentType = String(response.headers['content-type'] || '');
+      let bodyText = '';
+      let rawTitle = url;
 
-      const rawTitle = $('title').text().trim() || url;
-      const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-      const cleanSnippet = bodyText.slice(0, 500);
+      if (contentType.includes('application/pdf') || url.endsWith('.pdf')) {
+        bodyText = `[PDF Document Content] Fetched document from ${url}`;
+        rawTitle = `PDF: ${url.split('/').pop() || url}`;
+      } else {
+        const $ = cheerio.load(response.data);
+        $('script, style, iframe, nav, footer, ads, svg').remove();
 
-      const sanitizedContent = sanitizeHtml(bodyText, {
-        allowedTags: [],
-        allowedAttributes: {},
-      });
+        rawTitle = $('title').text().trim() || $('h1').first().text().trim() || url;
+        bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+      }
+
+      const cleanSnippet = bodyText.slice(0, 600);
+      const sanitizedContent = sanitizeHtml(bodyText, { allowedTags: [], allowedAttributes: {} });
 
       return {
         title: rawTitle,
         url,
-        snippet: cleanSnippet || sanitizedContent.slice(0, 300),
+        snippet: cleanSnippet || sanitizedContent.slice(0, 400),
         contentHash: hashString(sanitizedContent),
         fetchedAt: Date.now(),
+        category,
       };
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -58,68 +75,77 @@ export class BrowserAgent {
         snippet: `Failed to fetch webpage: ${errorMessage}`,
         contentHash: hashString(`error:${url}:${errorMessage}`),
         fetchedAt: Date.now(),
+        category,
       };
     }
   }
 
-  async searchWeb(query: string): Promise<SourceCitation[]> {
-    const results: SourceCitation[] = [];
-
-    // 1. Priority Ritual Knowledge Sources
-    const ritualSources = RitualKnowledgeLayer.getPrioritySources(query);
-    for (const rSource of ritualSources) {
-      results.push({
-        title: rSource.title,
-        url: rSource.url,
-        snippet: rSource.snippet,
-        contentHash: hashString(`${rSource.title}:${rSource.url}:${rSource.snippet}`),
-        fetchedAt: Date.now(),
-      });
-    }
-
-    // 2. Real Live Web Search via DuckDuckGo HTML Interface
+  async extractGithub(url: string): Promise<SourceCitation> {
     try {
-      const response = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-        timeout: 8000,
-      });
+      // Transform github web URL to raw user content if possible
+      let rawUrl = url;
+      if (url.includes('github.com') && !url.includes('raw.githubusercontent.com')) {
+        rawUrl = url
+          .replace('github.com', 'raw.githubusercontent.com')
+          .replace('/blob/', '/');
+      }
 
-      const $ = cheerio.load(response.data);
-      $('.result').each((i, element) => {
-        if (results.length >= 7) return;
+      const res = await axios.get(rawUrl, { timeout: 8000 });
+      const rawText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      const cleanSnippet = rawText.replace(/\s+/g, ' ').slice(0, 600);
 
-        const titleEl = $(element).find('.result__title a');
-        const snippetEl = $(element).find('.result__snippet');
-        
-        let title = titleEl.text().trim();
-        let rawUrl = titleEl.attr('href') || '';
-
-        if (rawUrl.includes('uddg=')) {
-          const match = rawUrl.match(/uddg=([^&]+)/);
-          if (match && match[1]) {
-            rawUrl = decodeURIComponent(match[1]);
-          }
-        }
-
-        const snippet = snippetEl.text().trim();
-
-        if (title && rawUrl.startsWith('http') && this.isAllowedUrl(rawUrl)) {
-          results.push({
-            title,
-            url: rawUrl,
-            snippet: snippet || `Web search result for ${query}`,
-            contentHash: hashString(`${title}:${rawUrl}:${snippet}`),
-            fetchedAt: Date.now(),
-          });
-        }
-      });
+      return {
+        title: `GitHub Repository File: ${url.split('/').slice(-2).join('/')}`,
+        url,
+        snippet: cleanSnippet,
+        contentHash: hashString(rawText),
+        fetchedAt: Date.now(),
+        category: 'github',
+      };
     } catch {
-      // Fallback
+      // Fallback to standard web crawl
+      return this.fetchStandardWeb(url, 'github');
     }
+  }
 
-    return results;
+  private async fetchStandardWeb(url: string, category: SourceCategory): Promise<SourceCitation> {
+    try {
+      const response = await axios.get(url, { timeout: 8000 });
+      const $ = cheerio.load(response.data);
+      $('script, style, nav, footer').remove();
+      const title = $('title').text().trim() || url;
+      const text = $('body').text().replace(/\s+/g, ' ').trim();
+      return {
+        title,
+        url,
+        snippet: text.slice(0, 600),
+        contentHash: hashString(text),
+        fetchedAt: Date.now(),
+        category,
+      };
+    } catch (err: any) {
+      return {
+        title: `Error (${url})`,
+        url,
+        snippet: err?.message || 'Failed to fetch',
+        contentHash: hashString(url),
+        fetchedAt: Date.now(),
+        category,
+      };
+    }
+  }
+
+  async fetchPage(url: string): Promise<SourceCitation> {
+    return this.extract(url);
+  }
+
+  async searchWeb(query: string, engine?: any): Promise<SourceCitation[]> {
+    const provider = SearchProviderFactory.create(engine);
+    return provider.search(query, { maxResults: 8 });
+  }
+
+  async fetchMultiple(urls: string[]): Promise<SourceCitation[]> {
+    const promises = urls.slice(0, 6).map((url) => this.extract(url));
+    return Promise.all(promises);
   }
 }

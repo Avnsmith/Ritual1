@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { AgentOrchestrator } from '@wowweb/agents';
 import { db } from '../storage.js';
 import { createPublicClient, http } from 'viem';
-import { ritualNet, hashString, hashArray, SourceCitation } from '@wowweb/shared';
+import { ritualNet, hashString, hashArray, SourceCitation, UserSettings } from '@wowweb/shared';
 import { WOWWEB_PROOF_REGISTRY_ADDRESS, WOWWEB_PROOF_REGISTRY_ABI } from '@wowweb/contracts';
 
 export const agentRouter = Router();
@@ -17,6 +17,10 @@ const publicClient = createPublicClient({
 agentRouter.get('/stream', async (req: Request, res: Response) => {
   const prompt = (req.query.prompt as string) || 'Research top autonomous AI browser agents';
   const ownerWallet = (req.query.owner as `0x${string}`) || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  const providerParam = (req.query.provider as any) || 'openai';
+  const searchEngineParam = (req.query.searchEngine as any) || 'duckduckgo';
+  const apiKeyParam = (req.query.apiKey as string) || undefined;
+  const autoPublishParam = req.query.autoPublish === 'false' ? false : true;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -27,11 +31,23 @@ agentRouter.get('/stream', async (req: Request, res: Response) => {
   };
 
   try {
-    sendEvent('status', { message: 'Agent initialization starting...', status: 'searching' });
+    sendEvent('status', { message: 'Initializing Verifiable AI Browser Agent...', status: 'searching' });
 
-    const task = await orchestrator.executeTask(prompt, ownerWallet, (step, currentTask) => {
-      sendEvent('step', { step, task: currentTask });
-    });
+    const userSettings: Partial<UserSettings> = {
+      ai: { provider: providerParam, apiKey: apiKeyParam || '', temperature: 0.3, topP: 1, maxTokens: 2048 },
+      search: { provider: searchEngineParam, apiKey: '' },
+      ritual: { autoPublish: autoPublishParam, publishMode: 'auto', verificationLevel: 'standard' },
+    };
+
+    const task = await orchestrator.executeTask(
+      prompt,
+      ownerWallet,
+      (step, currentTask) => {
+        sendEvent('step', { step, task: currentTask });
+      },
+      { provider: providerParam, apiKey: apiKeyParam },
+      { userSettings, autoPublish: autoPublishParam }
+    );
 
     db.saveTask(task);
     sendEvent('complete', { task });
@@ -45,13 +61,24 @@ agentRouter.get('/stream', async (req: Request, res: Response) => {
 
 // Standard REST execution
 agentRouter.post('/execute', async (req: Request, res: Response) => {
-  const { prompt, ownerWallet } = req.body;
+  const { prompt, ownerWallet, provider, apiKey, searchEngine, autoPublish } = req.body;
   if (!prompt || !ownerWallet) {
     return res.status(400).json({ error: 'Missing prompt or ownerWallet' });
   }
 
   try {
-    const task = await orchestrator.executeTask(prompt, ownerWallet);
+    const userSettings: Partial<UserSettings> = {
+      ai: { provider: provider || 'openai', apiKey: apiKey || '', temperature: 0.3, topP: 1, maxTokens: 2048 },
+      search: { provider: searchEngine || 'duckduckgo', apiKey: '' },
+    };
+
+    const task = await orchestrator.executeTask(
+      prompt,
+      ownerWallet,
+      undefined,
+      { provider: provider || 'openai', apiKey },
+      { userSettings, autoPublish: autoPublish ?? true }
+    );
     db.saveTask(task);
     res.json({ success: true, task });
   } catch (err: unknown) {
@@ -88,7 +115,21 @@ agentRouter.get('/proof/:id', (req: Request, res: Response) => {
   res.json({ proof: task.proof, task });
 });
 
-// Public Verification API - Recomputes & Verifies On-Chain Proof
+// Collections API
+agentRouter.get('/collections', (req: Request, res: Response) => {
+  res.json({ collections: db.getCollections() });
+});
+
+agentRouter.post('/collections/add', (req: Request, res: Response) => {
+  const { collectionId, taskId } = req.body;
+  if (!collectionId || !taskId) {
+    return res.status(400).json({ error: 'Missing collectionId or taskId' });
+  }
+  const success = db.addTaskToCollection(collectionId, taskId);
+  res.json({ success });
+});
+
+// Verification API
 agentRouter.get('/proof/:id/verify', async (req: Request, res: Response) => {
   const task = db.getTask(req.params.id);
   if (!task || !task.proof) {
@@ -96,7 +137,6 @@ agentRouter.get('/proof/:id/verify', async (req: Request, res: Response) => {
   }
 
   try {
-    // 1. Recompute local canonical hashes
     const computedPromptHash = hashString(task.prompt);
     const computedOutputHash = hashString(task.report?.rawMarkdown || '');
     const computedVisitedUrlsHash = hashArray(task.report?.sources?.map((s: SourceCitation) => s.url) || []);
@@ -105,7 +145,6 @@ agentRouter.get('/proof/:id/verify', async (req: Request, res: Response) => {
     const isOutputMatch = computedOutputHash === task.proof.outputHash;
     const isVisitedMatch = computedVisitedUrlsHash === task.proof.visitedUrlsHash;
 
-    // 2. Fetch on-chain record from RitualNet ProofRegistry contract
     const contractAddress = (process.env.NEXT_PUBLIC_PROOF_REGISTRY_ADDRESS || WOWWEB_PROOF_REGISTRY_ADDRESS) as `0x${string}`;
 
     let onChainRecord: any = null;

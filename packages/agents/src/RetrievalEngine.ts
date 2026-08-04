@@ -5,11 +5,12 @@ export interface RankedChunk {
   url: string;
   text: string;
   score: number;
+  category?: string;
 }
 
 export class RetrievalEngine {
-  // Split content into clean chunks
   chunkText(text: string, chunkSize: number = 400): string[] {
+    if (!text) return [];
     const words = text.split(/\s+/);
     const chunks: string[] = [];
     let current: string[] = [];
@@ -18,7 +19,7 @@ export class RetrievalEngine {
       current.push(word);
       if (current.join(' ').length >= chunkSize) {
         chunks.push(current.join(' '));
-        current = [];
+        current = current.slice(Math.floor(current.length / 3)); // 30% overlap
       }
     }
 
@@ -29,16 +30,15 @@ export class RetrievalEngine {
     return chunks;
   }
 
-  // Rank and deduplicate document chunks using term frequency and domain boost
-  rankChunks(query: string, sources: SourceCitation[]): RankedChunk[] {
-    const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  rankChunks(query: string, sources: SourceCitation[], topK: number = 10): RankedChunk[] {
+    const queryTerms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
     const chunks: RankedChunk[] = [];
 
     for (const source of sources) {
-      const isOfficial = source.url.includes('ritualfoundation.org') || source.url.includes('ritual');
-      const domainBoost = isOfficial ? 1.5 : 1.0;
+      const isOfficial = source.url.includes('ritual') || source.category === 'docs' || source.category === 'github';
+      const categoryBoost = isOfficial ? 1.4 : 1.0;
 
-      const rawChunks = this.chunkText(source.snippet, 300);
+      const rawChunks = this.chunkText(source.snippet, 350);
       for (const chunkText of rawChunks) {
         let matches = 0;
         const lowerChunk = chunkText.toLowerCase();
@@ -47,20 +47,18 @@ export class RetrievalEngine {
           if (lowerChunk.includes(term)) matches += 1;
         }
 
-        const score = (matches * 10 + (isOfficial ? 15 : 5)) * domainBoost;
+        const score = (matches * 12 + (isOfficial ? 10 : 5)) * categoryBoost;
 
         chunks.push({
           sourceTitle: source.title,
           url: source.url,
           text: chunkText,
           score,
+          category: source.category,
         });
       }
     }
 
-    // Sort by score descending and deduplicate by text similarity
-    return chunks
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
+    return chunks.sort((a, b) => b.score - a.score).slice(0, topK);
   }
 }

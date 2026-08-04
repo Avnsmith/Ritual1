@@ -2,171 +2,121 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
-import { useAuth } from './providers';
-import { ArrowRight, Cpu, ShieldCheck, Sparkles, Globe, Terminal, Lock, CheckCircle2, Zap, Layers } from 'lucide-react';
+import { useAccount, useConnect } from 'wagmi';
+import { ArrowRight, Sparkles, Globe, ShieldCheck, Cpu } from 'lucide-react';
 
 export default function LandingPage() {
   const { isConnected } = useAccount();
-  const { setIsModalOpen } = useAuth();
+  const { connectors, connect } = useConnect();
 
   return (
-    <div className="space-y-16 py-8">
-      {/* Hero Section */}
-      <section className="text-center space-y-6 max-w-4xl mx-auto pt-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-mono font-medium">
-          <Sparkles className="w-3.5 h-3.5" /> Autonomous AI Browser Agent on RitualNet
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-6 sm:p-12 selection:bg-purple-900 selection:text-white">
+      {/* Top Header */}
+      <header className="max-w-6xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-800/80">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-500/20">
+            W
+          </div>
+          <div>
+            <h1 className="font-bold text-lg text-white tracking-tight">WowWeb</h1>
+            <p className="text-[11px] text-slate-400 font-medium">Verifiable AI Browser Agent</p>
+          </div>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          Don't browse. <br />
-          <span className="gradient-text">Just ask.</span>
-        </h1>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/settings"
+            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 transition-colors"
+          >
+            Settings
+          </Link>
+          <Link
+            href="/dashboard"
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-md shadow-purple-900/30"
+          >
+            Start Research &rarr;
+          </Link>
+        </div>
+      </header>
 
-        <p className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          WowWeb is an autonomous Web3 AI agent that researches websites, reads documentation, analyzes repositories, and anchors every execution with verifiable on-chain proofs on RitualNet.
-        </p>
+      {/* Main Hero Section */}
+      <main className="max-w-4xl mx-auto w-full text-center space-y-8 my-auto py-12">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-950/80 border border-purple-800/60 text-purple-300 text-xs font-mono font-medium shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+          The First Verifiable AI Browser Agent
+        </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+        <div className="space-y-4">
+          <h1 className="text-5xl sm:text-7xl font-black tracking-tight text-white leading-tight">
+            Research anything. <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400">
+              Verify everything.
+            </span>
+          </h1>
+
+          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            WowWeb autonomously searches the web, crawls documentation & GitHub repositories, performs deep LLM reasoning, and cryptographically verifies every research output on RitualNet.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
           {isConnected ? (
             <Link
               href="/dashboard"
-              className="px-6 py-3.5 rounded-xl bg-accent text-black font-bold text-sm hover:bg-accent/90 transition-all shadow-lg shadow-accent/20 flex items-center gap-2"
+              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-purple-950/80 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
             >
-              Launch WowWeb Dashboard <ArrowRight className="w-4 h-4" />
+              <span>Start Research</span>
+              <ArrowRight className="w-5 h-5" />
             </Link>
           ) : (
             <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-6 py-3.5 rounded-xl bg-accent text-black font-bold text-sm hover:bg-accent/90 transition-all shadow-lg shadow-accent/20 flex items-center gap-2"
+              onClick={() => {
+                const injected = connectors.find((c) => c.id === 'injected' || c.id === 'metaMask');
+                if (injected) connect({ connector: injected });
+              }}
+              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-purple-950/80 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
             >
-              Connect Wallet & Start <ArrowRight className="w-4 h-4" />
+              <span>Connect Wallet</span>
+              <ArrowRight className="w-5 h-5" />
             </button>
           )}
 
           <Link
-            href="/about"
-            className="px-6 py-3.5 rounded-xl bg-surface border border-border hover:border-zinc-500 text-sm font-semibold text-zinc-300 transition-colors flex items-center gap-2"
+            href="/dashboard"
+            className="px-8 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-base transition-colors"
           >
-            <Terminal className="w-4 h-4 text-ritual" /> Architecture Blueprint
+            Launch Browser Agent
           </Link>
         </div>
-      </section>
 
-      {/* Interactive Demo Preview Widget */}
-      <section className="glass-panel rounded-2xl p-6 sm:p-8 border border-border shadow-2xl space-y-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500/80" />
-            <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
-            <span className="w-3 h-3 rounded-full bg-green-500/80" />
-            <span className="font-mono text-xs text-zinc-400 ml-2">wowweb-agent://execution-preview</span>
+        {/* Feature Pill Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-12 max-w-3xl mx-auto text-left">
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <Globe className="w-5 h-5 text-purple-400" />
+            <h3 className="font-bold text-sm text-slate-200">Autonomous Web Retrieval</h3>
+            <p className="text-xs text-slate-400">Multi-engine search, GitHub parsing, PDF text extraction & web crawling.</p>
           </div>
 
-          <span className="px-2.5 py-0.5 rounded bg-ritual/10 border border-ritual/30 text-ritual font-mono text-[11px] flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3" /> RitualNet Chain ID: 1979
-          </span>
-        </div>
-
-        <div className="space-y-4 font-mono text-xs">
-          <div className="p-3.5 rounded-xl bg-surface border border-border text-zinc-300 flex items-center gap-3">
-            <span className="text-accent font-bold">&gt;</span>
-            <span className="text-white">Research top autonomous AI browser agents in 2026 and compare on-chain proof systems.</span>
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <Cpu className="w-5 h-5 text-indigo-400" />
+            <h3 className="font-bold text-sm text-slate-200">Multi-LLM Reasoning</h3>
+            <p className="text-xs text-slate-400">Support for OpenAI, Gemini, Claude, Groq, OpenRouter & Ollama.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-[11px]">
-            <div className="p-3 rounded-lg bg-elevated border border-border">
-              <span className="text-zinc-500 block">PLANNER AGENT</span>
-              <span className="text-zinc-200">Deconstructing 3 sub-tasks</span>
-            </div>
-            <div className="p-3 rounded-lg bg-elevated border border-border">
-              <span className="text-zinc-500 block">BROWSER AGENT</span>
-              <span className="text-blue-400">Fetching 4 docs pages</span>
-            </div>
-            <div className="p-3 rounded-lg bg-elevated border border-border">
-              <span className="text-zinc-500 block">VERIFICATION AGENT</span>
-              <span className="text-purple-400">keccak256 proof hashing</span>
-            </div>
-            <div className="p-3 rounded-lg bg-elevated border border-ritual/40">
-              <span className="text-zinc-500 block">RITUALNET PROOF</span>
-              <span className="text-ritual font-bold">0x8A79...C5E0 Verified</span>
-            </div>
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-sm text-slate-200">Ritual Verification Layer</h3>
+            <p className="text-xs text-slate-400">Cryptographic hash commitments anchored on RitualNet smart contracts.</p>
           </div>
         </div>
-      </section>
+      </main>
 
-      {/* Feature Cards Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-panel glass-panel-hover rounded-2xl p-6 border border-border space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-            <Globe className="w-5 h-5" />
-          </div>
-          <h3 className="text-base font-bold text-white">Autonomous Web Agent</h3>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Opens websites, navigates pages, extracts documentation, inspects GitHub repositories, and handles pagination automatically.
-          </p>
-        </div>
-
-        <div className="glass-panel glass-panel-hover rounded-2xl p-6 border border-border space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-ritual/10 border border-ritual/30 flex items-center justify-center text-ritual">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <h3 className="text-base font-bold text-white">Verifiable On-Chain Proofs</h3>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Every prompt, step trace, and report generates an immutable cryptographic hash commitment registered on RitualNet (Chain ID: 1979).
-          </p>
-        </div>
-
-        <div className="glass-panel glass-panel-hover rounded-2xl p-6 border border-border space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-            <Cpu className="w-5 h-5" />
-          </div>
-          <h3 className="text-base font-bold text-white">Enshrined AI Precompiles</h3>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Direct integration with Ritual precompiles (0x0801 HTTP, 0x0802 LLM Inference, 0x0820 Stateful Agents, RitualWallet).
-          </p>
-        </div>
-      </section>
-
-      {/* Architecture Diagram */}
-      <section className="glass-panel rounded-2xl p-8 border border-border space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-bold text-white">RitualNet Native Architecture</h2>
-          <p className="text-xs text-zinc-400">Off-chain browser execution coupled with on-chain cryptographic verification</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-center text-xs font-mono">
-          <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
-            <span className="text-zinc-500 text-[10px] block">STEP 1</span>
-            <span className="text-white font-bold block">User Wallet</span>
-            <span className="text-zinc-400 text-[11px]">EIP-4361 Signed Session</span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
-            <span className="text-zinc-500 text-[10px] block">STEP 2</span>
-            <span className="text-accent font-bold block">Planner & Browser</span>
-            <span className="text-zinc-400 text-[11px]">Web Fetching & Crawling</span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
-            <span className="text-zinc-500 text-[10px] block">STEP 3</span>
-            <span className="text-purple-400 font-bold block">Research & Summary</span>
-            <span className="text-zinc-400 text-[11px]">Matrix & Markdown Synthesis</span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
-            <span className="text-zinc-500 text-[10px] block">STEP 4</span>
-            <span className="text-blue-400 font-bold block">Verification Agent</span>
-            <span className="text-zinc-400 text-[11px]">keccak256 Hash Commitments</span>
-          </div>
-
-          <div className="p-4 rounded-xl bg-ritual/10 border border-ritual/30 space-y-2">
-            <span className="text-zinc-500 text-[10px] block">STEP 5</span>
-            <span className="text-ritual font-bold block">RitualNet Chain</span>
-            <span className="text-zinc-400 text-[11px]">WowWebProofRegistry (1979)</span>
-          </div>
-        </div>
-      </section>
+      {/* Minimal Footer */}
+      <footer className="max-w-6xl mx-auto w-full py-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-mono">
+        <div>WowWeb Verifiable AI Browser Agent</div>
+        <div>RitualNet Chain ID: 1979</div>
+      </footer>
     </div>
   );
 }
